@@ -1,7 +1,7 @@
 # Спасибо: snfsx, кезу, а так же Gemini
 # requires: httpx
 # meta developer: @hSunnexGB
-# meta repo: none
+# meta repo: https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/spotisaver.py
 # meta pic: https://r2.fakecrime.bio/uploads/ddf03169-09fe-4eb1-8eea-bad1a4cc4ada.jpg
 # meta banner: https://r2.fakecrime.bio/uploads/ddf03169-09fe-4eb1-8eea-bad1a4cc4ada.jpg
 # meta fhsdesc: Spotify, downloader, music, музыка, спотифай,скачать музыку
