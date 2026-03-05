@@ -1,5 +1,5 @@
 # Спасибо: snfsx, кезу, а так же Gemini
-# 
+#  блять я забыл поменять параметры для дебага...
 # requires: httpx
 # meta developer: @SunnexGB
 # meta repo: https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/spotisaver.py
@@ -58,7 +58,7 @@ class SpotiSaver(loader.Module):
                 "TimeOut",
                 60,
                 "Response timeout in seconds | Время ожидания ответа в секундах",
-                validator=loader.validators.Integer(minimum=1),
+                validator=loader.validators.Integer(minimum=30),
             )
         )
         
