@@ -1,12 +1,13 @@
 # Спасибо: snfsx, кезу, а так же Gemini
+# 
 # requires: httpx
-# meta developer: @hSunnexGB
+# meta developer: @SunnexGB
 # meta repo: https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/spotisaver.py
 # meta pic: https://r2.fakecrime.bio/uploads/ddf03169-09fe-4eb1-8eea-bad1a4cc4ada.jpg
 # meta banner: https://r2.fakecrime.bio/uploads/ddf03169-09fe-4eb1-8eea-bad1a4cc4ada.jpg
 # meta fhsdesc: Spotify, downloader, music, музыка, спотифай,скачать музыку
 #current version
-__version__ = (1, 0, 0)
+__version__ = (1, 0, 1)
 
 import httpx
 import os
@@ -17,6 +18,7 @@ import logging
 from .. import loader, utils
 from herokutl.types import Message
 
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 @loader.tds
@@ -25,9 +27,9 @@ class SpotiSaver(loader.Module):
     
     strings = {
         "name": "SpotiSaver",
-        "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> link to track is not specified</b>",
+        "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> link to song is not specified</b>",
         "downloading": "<b><tg-emoji emoji-id=5443127283898405358>📥</tg-emoji> Downloading:</b> <code>{}</code>",
-        "error": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Error`: {}</b>",
+        "error": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Error`, see logs!</b>",
         "done": "<b><tg-emoji emoji-id=5206607081334906820>✔️</tg-emoji> Done!</b>",
         "nf_id": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> ID key not found!</b>",
         "nf_track": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Song not found.</b>"
@@ -36,9 +38,9 @@ class SpotiSaver(loader.Module):
     strings_ru = {
         "name": "SpotiSaver",
         "_cls_doc": "Скачивание музыки из Spotify через Spotisaver",
-        "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Ссылка на трек не указана</b>",
+        "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Ссылка на песню не указана</b>",
         "downloading": "<b><tg-emoji emoji-id=5443127283898405358>📥</tg-emoji> Скачиваю:</b> <code>{}</code>",
-        "error": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Ерорь: {}</b>",
+        "error": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Ерорь, смотри логи!</b>",
         "done": "<b><tg-emoji emoji-id=5206607081334906820>✔️</tg-emoji> Готово!</b>",
         "nf_id": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> ID песни не найден</b>",
         "nf_track": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Песня не найдена</b>"
@@ -50,6 +52,16 @@ class SpotiSaver(loader.Module):
         second_part = ''.join(random.choices(string.digits, k=8))
         return f"v_{prefix}{first_part}.{second_part}"
 
+    def __init__(self):
+        self.config = loader.ModuleConfig(
+            loader.ConfigValue(
+                "TimeOut",
+                60,
+                "Response timeout in seconds | Время ожидания ответа в секундах",
+                validator=loader.validators.Integer(minimum=1),
+            )
+        )
+        
     @loader.command(ru_doc="<ссылка> — Скачать трек из Spotify")
     async def spotsave(self, message: Message):
         """<link> - Download track from Spotify"""
@@ -76,7 +88,7 @@ class SpotiSaver(loader.Module):
                 info_res = await client.get(info_url, headers=headers)
                 
                 if info_res.status_code != 200:
-                    return await utils.answer(message, self.strings["error"].format(f"HTTP {info_res.status_code}"))
+                    return await utils.answer(message, self.strings["error"])
 
                 info_data = info_res.json()
                 if 'tracks' not in info_data or not info_data['tracks']:
@@ -101,15 +113,16 @@ class SpotiSaver(loader.Module):
                     "https://spotisaver.net/api/download_track.php",
                     headers=headers,
                     json=payload,
-                    timeout=30
+                    timeout=self.config["TimeOut"]
                 )
 
                 content = response.content
                 if "application/json" in response.headers.get("Content-Type", ""):
                     res_json = response.json()
                     if res_json.get("url"):
-                        file_res = await client.get(res_json["url"], timeout=30)
+                        file_res = await client.get(res_json["url"], timeout=self.config["TimeOut"])
                         content = file_res.content
+   
                 filename = f"{track_id}.mp3" 
                 with open(filename, "wb") as f:
                     f.write(content)
