@@ -55,7 +55,7 @@ class SpotifyLyrics(loader.Module):
                 "lyrics_delay",
                 0.5,
                 "delay in switching to a new timing sector with words",
-                validator=loader.validators.float(minimum=0.5),
+                validator=loader.validators.Float(minimum=0.1),
             ),
         )
 
