@@ -1,5 +1,12 @@
 # meta developer: @SunnexGB
 # requires: aiohttp
+# meta repo: https://r2.fakecrime.bio/uploads/f49a9294-36ad-4fc4-801f-48cb049111d6.jpg
+# meta pic: https://r2.fakecrime.bio/uploads/f49a9294-36ad-4fc4-801f-48cb049111d6.jpg
+# meta banner: https://r2.fakecrime.bio/uploads/f49a9294-36ad-4fc4-801f-48cb049111d6.jpg
+# meta fhsdesc: Spotify, music, музыка, спотифай,Lyrics, слова, текст, трек, песня
+# все же я не знаю трек или сонг, так что пусть будет трек, а не сонг потому что интуитивнее поняттнее,наверное?
+# крутой баннер да?
+#current version
 __version__ = (1, 0, 0)
 
 from herokutl.types import Message
