@@ -27,7 +27,7 @@ class HerokuTime(loader.Module):
         "hour": "ч",
     }
 
-    async def client_ready(self, client):
+    async def client_ready(self, client, db):
         self._client = client
         if not self.get("start_time"):
             self.set("start_time", int(time.time()))
