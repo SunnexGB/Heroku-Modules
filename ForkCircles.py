@@ -5,7 +5,7 @@
 
 # Note
 # This is a fork module from @KeyZenD.
-# Here is a link to the original module: https://raw.githubusercontent.com/MuRuLOSE/limoka/refs/heads/main/KeyZenD/modules/Circles.py
+# Here is a link to the original module: https://github.com/KeyZenD/modules/blob/master/Circles.py
 
 from .. import loader, utils
 from PIL import Image, ImageDraw, ImageOps, ImageFilter
