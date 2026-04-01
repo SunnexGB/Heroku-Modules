@@ -2,3 +2,4 @@ SpotiSaver
 SpotifyLyrics
 YandexLyrics
 HerokuTime
+Shazamio
