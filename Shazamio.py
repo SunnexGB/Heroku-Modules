@@ -5,7 +5,7 @@
 #current version
 __version__ = (1, 0, 0)
 
-from heroku import loader, utils
+from .. import loader, utils
 import os
 import asyncio
 from shazamio import Shazam
@@ -65,15 +65,16 @@ class Shazamio(loader.Module):
         """Recognize music (Reply in video)"""
         reply = await message.get_reply_message()
         if not reply:
-            await utils.answer(message, self.strings("no_reply"))
+            await utils.answer(message, self.strings["no_reply"])
             return
 
         if not reply.video:
-            await utils.answer(message, self.strings("no_video"))
+            await utils.answer(message, self.strings["no_video"])
             return
 
-        await utils.answer(message, self.strings("processing"))
-        video_path = await message.client.download_media(reply.video)
+        await utils.answer(message, self.strings["processing"])
+        downloaded_path = await message.client.download_media(reply.video)
+        video_path = os.path.abspath(downloaded_path)
         base, _ = os.path.splitext(video_path)
         audio_path = f"{base}.mp3"
 
@@ -89,7 +90,11 @@ class Shazamio(loader.Module):
             )
             await proc.communicate()
 
-            await utils.answer(message, self.strings("shazaming"))
+            if not os.path.exists(audio_path):
+                await utils.answer(message, self.strings["ffmpeg_error"])
+                return
+
+            await utils.answer(message, self.strings["shazaming"])
             shazam = Shazam()
             result = await shazam.recognize(audio_path)
 
@@ -100,17 +105,17 @@ class Shazamio(loader.Module):
                 url = track.get("url")
 
                 if url:
-                    text = self.strings("result_url").format(
+                    text = self.strings["result_url"].format(
                         title=title, artist=artist, url=url
                     )
                 else:
-                    text = self.strings("result").format(
+                    text = self.strings["result"].format(
                         title=title, artist=artist
                     )
 
                 await utils.answer(message, text)
             else:
-                await utils.answer(message, self.strings("not_found"))
+                await utils.answer(message, self.strings["not_found"])
 
         finally:
             if os.path.exists(video_path):
