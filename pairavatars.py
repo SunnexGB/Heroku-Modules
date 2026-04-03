@@ -1,6 +1,10 @@
 # requires: https://files.pythonhosted.org/packages/8c/21/c2bcdd5906101a30244eaffc1b6e6ce71a31bd0742a01eb89e660ebfac2d/pillow-12.2.0.tar.gz
-# meta banner: https://tmpfiles.org/dl/31910206/pairavs.png
+# meta banner: https://i.ibb.co/yFVJ6L5D/pairavs.webp
 # meta developer: @SunnexGB
+# я хочу красивый баннер,не осуждайте.
+# add version
+__version__ = (1, 0, 1)
+
 import io
 from PIL import Image
 from herokutl.types import Message
@@ -23,9 +27,9 @@ class pairavatars(loader.Module):
         "error": "<tg-emoji emoji-id=5409235172979672859>⚠️</tg-emoji> | <b>Еррорь</b>"
     }
 
-    @loader.command(ru_doc="Создать парные аватарки", only_reply=True)
+    @loader.command(ru_doc="- Создать парные аватарки (команда работает ТОЛЬКО ответом на сообщение)", only_reply=True)
     async def pairavs(self, message: Message):
-        """Create pair avatars"""
+        """- Create pair avatars (command work ONLY reply message)"""
         reply = await message.get_reply_message()
         processing_msg = await utils.answer(message, self.strings["processing"])
         try:
