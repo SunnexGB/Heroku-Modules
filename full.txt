@@ -6,3 +6,4 @@ Shazamio
 ForkCircles
 Mikuru
 pairavatars
+ASCII
