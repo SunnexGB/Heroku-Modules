@@ -21,7 +21,7 @@ BASE = 0x2800
 INVERT_MAP = {chr(BASE + c): chr(BASE + (c ^ 0xFF)) for c in range(256)}
 
 
-class ascii_lib(loader.Library):
+class AsciiLib(loader.Library):
     developer = "@SunnexGB"
 
     def resize(self, img):
