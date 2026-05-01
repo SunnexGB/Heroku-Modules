@@ -1,6 +1,6 @@
 # meta developer: @SunnexGB
-# meta pic: https://r2.fakecrime.bio/uploads/7ba33dd9-b0a6-4c1c-8002-dc5c87d83365.jpg
-# meta banner: https://r2.fakecrime.bio/uploads/7ba33dd9-b0a6-4c1c-8002-dc5c87d83365.jpg
+# meta pic: https://r2.fakecrime.bio/uploads/e19c2179-d2e9-4206-b783-25d6c0eb72eb.jpg
+# meta banner: https://r2.fakecrime.bio/uploads/e19c2179-d2e9-4206-b783-25d6c0eb72eb.jpg
 # meta fhsdesc: Плейсхолдер, placeholder, Time, Время, Статистика, Stats
 # крутой баннер да?
 #current version
