@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>NoChess</title>
+</head>
+<body>
+    <div class="web_chess">
+        <div class="pgn_moves_board">
+            <div class="move_board_bg"></div>
+            <div class="moves_list">
+                <div class="moves_list_mobile">
+                </div>
+            </div>
+            <div class="moves_control_buttons">
+                <div class="move_btn first_move_btn">
+                    <img src="https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/icons/first.png" alt="first">
+                </div>
+                <div class="move_btn prev_move_btn">
+                    <img src="https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/icons/prev.png" alt="prev">
+                </div>
+                <div class="move_btn next_move_btn">
+                    <img src="https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/icons/next.png" alt="next">
+                </div>
+                <div class="move_btn last_move_btn">
+                    <img src="https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/icons/last.png" alt="last">
+                </div>
+            </div>
+        </div>
+        <div class="board-wrapper">
+            <canvas id="chessBoard"></canvas>
+        </div>
+        <div class="main_board">
+            <div class="main_board_bg"></div>
+            <div class="player_block player_black">
+                <div class="player_name_black">guest-acc</div>
+                <div class="player_avatar avatar_black"></div>
+            </div>
+            <div class="divider_line top_line">
+                <svg width="270" height="4" viewBox="0 0 270 4">
+                    <path d="M75 0H95V4H75V0Z" fill="white" />
+                    <path d="M50 0H70V4H50V0Z" fill="white" />
+                    <path d="M25 0H45V4H25V0Z" fill="white" />
+                    <path d="M0 0H20V4H0V0Z" fill="white" />
+                    <path d="M100 0H120V4H100V0Z" fill="white" />
+                    <path d="M125 0H145V4H125V0Z" fill="white" />
+                    <path d="M150 0H170V4H150V0Z" fill="white" />
+                    <path d="M175 0H195V4H175V0Z" fill="white" />
+                    <path d="M200 0H220V4H200V0Z" fill="white" />
+                    <path d="M225 0H245V4H225V0Z" fill="white" />
+                    <path d="M250 0H270V4H250V0Z" fill="white" />
+                </svg>
+            </div>
+            <div class="timer timer_black">--:--</div>
+            <div class="board_menu">
+                <div class="menu_btn" id="flip_board_btn">
+                    <img src="https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/icons/menu-flip.svg" alt="flip" />
+                </div>
+                <div class="menu_btn" id="history_btn">
+                    <img src="https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/icons/menu-history.svg" alt="history" />
+                </div>
+                <div class="menu_btn" id="share_btn">
+                    <img src="https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/icons/menu-share.svg" alt="share" />
+                </div>
+                <div class="menu_btn menu_more_btn" id="more_btn" aria-label="toggle menu">
+                    <span class="more_dots" aria-hidden="true">
+                        <span class="more_dot more_dot_top"></span>
+                        <span class="more_dot more_dot_mid"></span>
+                        <span class="more_dot more_dot_bottom"></span>
+                    </span>
+                </div>
+            </div>
+            <div class="timer timer_white">--:--</div>
+            <div class="divider_line bottom_line">
+                <svg width="270" height="4" viewBox="0 0 270 4">
+                    <path d="M75 0H95V4H75V0Z" fill="white" />
+                    <path d="M50 0H70V4H50V0Z" fill="white" />
+                    <path d="M25 0H45V4H25V0Z" fill="white" />
+                    <path d="M0 0H20V4H0V0Z" fill="white" />
+                    <path d="M100 0H120V4H100V0Z" fill="white" />
+                    <path d="M125 0H145V4H125V0Z" fill="white" />
+                    <path d="M150 0H170V4H150V0Z" fill="white" />
+                    <path d="M175 0H195V4H175V0Z" fill="white" />
+                    <path d="M200 0H220V4H200V0Z" fill="white" />
+                    <path d="M225 0H245V4H225V0Z" fill="white" />
+                    <path d="M250 0H270V4H250V0Z" fill="white" />
+                </svg>
+            </div>
+            <div class="player_block player_white">
+                <div class="player_avatar avatar_white"></div>
+                <div class="player_name_white">Sunnex &lt;3</div>
+            </div>
+        </div>
+    </div>
+    <div class="submenu_overlay" id="submenu_overlay"></div>
+    <div class="submenu_panel" id="history_panel">
+        <div class="submenu_title">History</div>
+        <div class="history_games" id="history_games"></div>
+    </div>
+    <div class="submenu_panel" id="share_panel">
+        <div class="submenu_title">Share PGN</div>
+        <textarea id="share_pgn_text"></textarea>
+        <div class="share_actions">
+            <button id="load_pgn_btn" type="button">Load PGN</button>
+            <button id="copy_pgn_btn" type="button">Copy PGN</button>
+        </div>
+        <div id="share_status"></div>
+    </div>
+    <script src="javascript.js"></script>
+</body>
+</html>
