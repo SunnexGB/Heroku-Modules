@@ -49,7 +49,7 @@ class NoChess(loader.Module):
         "cma_done": "(*˘︶˘*) <b>Done.</b>",
         "cma_error": "Error: <code>{}</code>",
         "RuntimeError": "inline bot username not found",
-        "not_supported_platform": "⚠️ Unfortunately, it is impossible to install this module on this platform.\n\nℹ️ This is not an error, please do not contact support."
+        "not_supported_platform": "(┬┬＿┬┬) Unfortunately, it is impossible to install this module on this platform.\n\n(〜^∇^)〜 This is not an error, please do not contact support."
     }
 
     strings_ru = {
@@ -70,7 +70,7 @@ class NoChess(loader.Module):
         "cma_done": "(*˘︶˘*) <b>Готово</b>",
         "cma_error": "Ошибка: <code>{}</code>",
         "RuntimeError": "юз инлайн бота не найден",
-        "not_supported_platform": "⚠️ К сожалению, на эту платформу невозможно установить этот модуль.\n\nℹ️ Это не ошибка, пожалуйста, не обращайтесь в поддержку."
+        "not_supported_platform": "(┬┬＿┬┬) К сожалению, на эту платформу невозможно установить этот модуль.\n\n(〜^∇^)〜 Это не ошибка, пожалуйста, не обращайтесь в поддержку."
     }
 
     async def client_ready(self):
