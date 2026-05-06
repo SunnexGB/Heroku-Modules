@@ -6,7 +6,7 @@
 # все же я не знаю трек или сонг, так что пусть будет трек, а не сонг потому что интуитивнее поняттнее,наверное?
 # крутой баннер да?
 #current version
-__version__ = (1, 0, 0)
+__version__ = (1, 1, 0)
 
 from herokutl.types import Message
 from .. import loader, utils
@@ -51,10 +51,20 @@ class YandexLyrics(loader.Module):
                 validator=loader.validators.String(),
             ),
             loader.ConfigValue(
+                "dot",
+                "♪",
+                "instrumental_emoji or text",
+                validator=loader.validators.String(),
+            ),
+            loader.ConfigValue(
                 "lyrics_delay",
                 0.5,
                 "delay in switching to a new timing sector with words",
-                validator=loader.validators.Float(minimum=0.5),
+            ),
+            loader.ConfigValue(
+                "request_timeout",
+                12,
+                "timeout value",
             ),
         )
 
@@ -65,11 +75,13 @@ class YandexLyrics(loader.Module):
                 async with session.get(
                     "https://lrclib.net/api/search",
                     params={"track_name": clean_track, "artist_name": artist},
-                    timeout=aiohttp.ClientTimeout(total=6),
+                    timeout=aiohttp.ClientTimeout(total=(self.config["request_timeout"])),
                 ) as resp:
                     if resp.status == 200:
                         res = await resp.json()
                         return res[0] if res else None
+        except asyncio.TimeoutError:
+            return {"timeout": True}
         except Exception:
             pass
         return None
@@ -100,7 +112,7 @@ class YandexLyrics(loader.Module):
             win_end = min(len(lines), curr_idx + 6)
             rows = []
             for i in range(win_start, win_end):
-                t = lines[i]["text"] or self.strings("dot")
+                t = lines[i]["text"] or self.config["dot"]
                 if i == curr_idx:
                     rows.append(
                         f"<b>{self.config['emoji_current']} {utils.escape_html(t)}</b>"
@@ -188,6 +200,11 @@ class YandexLyrics(loader.Module):
             old.cancel()
 
         data = await self._get_lyrics(artist_name, track_name)
+        if data and data.get("timeout"):
+            return utils.answer(
+                message,
+                self.strings["timeout"]
+            )
         if not data or data.get("instrumental"):
             return await utils.answer(
                 message,
