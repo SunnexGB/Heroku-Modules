@@ -49,6 +49,7 @@ class NoChess(loader.Module):
         "cma_done": "(*˘︶˘*) <b>Done.</b>",
         "cma_error": "Error: <code>{}</code>",
         "RuntimeError": "inline bot username not found",
+        "not_supported_platform": "(┬┬＿┬┬) Unfortunately, it is impossible to install this module on this platform.\n\n(〜^∇^)〜 This is not an error, please do not contact support."
     }
 
     strings_ru = {
@@ -69,8 +70,14 @@ class NoChess(loader.Module):
         "cma_done": "(*˘︶˘*) <b>Готово</b>",
         "cma_error": "Ошибка: <code>{}</code>",
         "RuntimeError": "юз инлайн бота не найден",
+        "not_supported_platform": "(┬┬＿┬┬) К сожалению, на эту платформу невозможно установить этот модуль.\n\n(〜^∇^)〜 Это не ошибка, пожалуйста, не обращайтесь в поддержку."
     }
 
+    async def client_ready(self):
+        platform = utils.get_named_platform()
+        if platform in ("HikkaHost"):
+            raise loader.LoadError(self.strings("not_supported_platform"))
+    
     def __init__(self):
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
