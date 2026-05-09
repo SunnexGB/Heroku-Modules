@@ -10,7 +10,7 @@
       "name": "prolog_1",
       "action": "load_asset",
       "location": "anim/prolog_1",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_1.jpg"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_1.jpg?raw=true"
     },
     {
       "type": "narration",
@@ -46,7 +46,7 @@
       "name": "anim_prolog1_off",
       "action": "load_asset",
       "location": "anim/anim_prolog1_off",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/anim_prolog1_off.gif"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/anim_prolog1_off.gif?raw=true"
     },
     {
       "type": "dialogue",
@@ -262,7 +262,7 @@
       "name": "black",
       "action": "load_asset",
       "location": "bg/black",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/black.png",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/black.png?raw=true",
       "duration": null
     },
     {
@@ -271,7 +271,7 @@
       "name": "1_prologue",
       "action": "load_asset",
       "location": "cg/p_kb_1",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_1.png",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_1.png?raw=true",
       "duration": null
     },
     {
@@ -280,7 +280,7 @@
       "name": "2_prologue",
       "action": "load_asset",
       "location": "cg/p_kb_2",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_2.png",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_2.png?raw=true",
       "duration": null
     },
     {
@@ -289,7 +289,7 @@
       "name": "3_prologue",
       "action": "load_asset",
       "location": "cg/p_kb_3",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_3.png",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_3.png?raw=true",
       "duration": null
     },
     {
@@ -298,7 +298,7 @@
       "name": "4_prologue",
       "action": "load_asset",
       "location": "cg/p_kb_4",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_4.png",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_4.png?raw=true",
       "duration": null
     },
     {
@@ -307,7 +307,7 @@
       "name": "5_prologue",
       "action": "load_asset",
       "location": "cg/p_kb_5",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_5.png"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/cg/p_kb_5.png?raw=true"
     },
     {
       "type": "narration",
@@ -343,7 +343,7 @@
       "name": "prolog_15",
       "action": "load_asset",
       "location": "anim/prolog_15",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_15.png",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_15.png?raw=true",
       "duration": null
     },
     {
@@ -352,7 +352,7 @@
       "name": "prolog_3",
       "action": "load_asset",
       "location": "anim/prolog_3",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_3.png",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_3.png?raw=true",
       "duration": null
     },
     {
@@ -361,7 +361,7 @@
       "name": "prolog_4",
       "action": "load_asset",
       "location": "anim/prolog_4",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_4.png"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_4.png?raw=true"
     },
     {
       "type": "narration",
@@ -373,7 +373,7 @@
       "name": "prolog_5",
       "action": "load_asset",
       "location": "anim/prolog_5",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_5.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_5.jpg?raw=true",
       "duration": null
     },
     {
@@ -382,7 +382,7 @@
       "name": "prolog_14",
       "action": "load_asset",
       "location": "anim/prolog_14",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_14.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_14.jpg?raw=true",
       "duration": null
     },
     {
@@ -391,7 +391,7 @@
       "name": "prolog_11",
       "action": "load_asset",
       "location": "anim/prolog_11",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_11.jpg"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_11.jpg?raw=true"
     },
     {
       "type": "narration",
@@ -403,7 +403,7 @@
       "name": "prolog_2",
       "action": "load_asset",
       "location": "anim/prolog_2",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_2.jpg"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_2.jpg?raw=true"
     },
     {
       "type": "narration",
@@ -491,7 +491,7 @@
       "name": "semen_room_window",
       "action": "load_asset",
       "location": "bg/semen_room_window",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/semen_room_window.jpg"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/semen_room_window.jpg?raw=true"
     },
     {
       "type": "narration",
@@ -519,7 +519,7 @@
       "name": "intro_1",
       "action": "load_asset",
       "location": "anim/intro_1",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_1.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_1.jpg?raw=true",
       "duration": null
     },
     {
@@ -528,7 +528,7 @@
       "name": "intro_2",
       "action": "load_asset",
       "location": "anim/intro_2",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_2.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_2.jpg?raw=true",
       "duration": null
     },
     {
@@ -537,7 +537,7 @@
       "name": "intro_3",
       "action": "load_asset",
       "location": "anim/intro_3",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_3.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_3.jpg?raw=true",
       "duration": null
     },
     {
@@ -546,7 +546,7 @@
       "name": "intro_4",
       "action": "load_asset",
       "location": "anim/intro_4",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_4.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_4.jpg?raw=true",
       "duration": null
     },
     {
@@ -555,7 +555,7 @@
       "name": "intro_5",
       "action": "load_asset",
       "location": "anim/intro_5",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_5.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_5.jpg?raw=true",
       "duration": null
     },
     {
@@ -564,7 +564,7 @@
       "name": "intro_6",
       "action": "load_asset",
       "location": "anim/intro_6",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_6.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_6.jpg?raw=true",
       "duration": null
     },
     {
@@ -573,7 +573,7 @@
       "name": "intro_8",
       "action": "load_asset",
       "location": "anim/intro_8",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_8.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_8.jpg?raw=true",
       "duration": null
     },
     {
@@ -582,7 +582,7 @@
       "name": "intro_7",
       "action": "load_asset",
       "location": "anim/intro_7",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_7.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_7.jpg?raw=true",
       "duration": null
     },
     {
@@ -591,7 +591,7 @@
       "name": "bus_stop",
       "action": "load_asset",
       "location": "bg/bus_stop",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/bus_stop.jpg"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/bus_stop.jpg?raw=true"
     },
     {
       "type": "narration",
@@ -635,7 +635,7 @@
       "name": "prolog_2",
       "action": "load_asset",
       "location": "anim/prolog_2",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_2.jpg"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/prolog_2.jpg?raw=true"
     },
     {
       "type": "narration",
@@ -727,7 +727,7 @@
       "name": "intro_10",
       "action": "load_asset",
       "location": "anim/intro_10",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_10.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_10.jpg?raw=true",
       "duration": null
     },
     {
@@ -736,7 +736,7 @@
       "name": "intro_11",
       "action": "load_asset",
       "location": "anim/intro_11",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_11.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_11.jpg?raw=true",
       "duration": null
     },
     {
@@ -745,7 +745,7 @@
       "name": "intro_13",
       "action": "load_asset",
       "location": "anim/intro_13",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_13.jpg",
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/anim/intro_13.jpg?raw=true",
       "duration": null
     },
     {
@@ -754,7 +754,7 @@
       "name": "intro_xx",
       "action": "load_asset",
       "location": "bg/intro_xx",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/intro_xx.jpg"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/intro_xx.jpg?raw=true"
     },
     {
       "type": "narration",
@@ -818,7 +818,7 @@
       "name": "black",
       "action": "load_asset",
       "location": "bg/black",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/int_bus_black.jpg"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/bg/int_bus_black.jpg?raw=true"
     },
     {
       "type": "opening",
@@ -826,7 +826,7 @@
       "name": "opening",
       "action": "load_asset",
       "location": "opening/opening",
-      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/opening/opening.mp4"
+      "raw_url": "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/opening/opening.mp4?raw=true"
     }
   ]
 }
