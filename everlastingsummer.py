@@ -12,10 +12,10 @@ from .. import loader, utils
 from ..types import InlineCall
 
 
-prologue_dialogs_url = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/Assets/Everlasting_Summer/ddialogs/prologue_only.json"
-routes_url = "https://github.com/SunnexGB/Heroku-Modules/blob/main/Assets/Everlasting_Summer/ddialogs/routes_prologue.json"
-menu_background_url = "https://github.com/SunnexGB/Heroku-Modules/blob/main/Assets/Everlasting_Summer/images/1920/in_telegram_images/Start_Menu.jpg"
-save_background_url = "https://github.com/SunnexGB/Heroku-Modules/blob/main/Assets/Everlasting_Summer/images/1920/in_telegram_images/Save_Menu.png"
+prologue_dialogs_url = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/ddialogs/prologue_only.json"
+routes_url = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/ddialogs/routes_prologue.json"
+menu_background_url = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/in_telegram_images/Start_Menu.jpg"
+save_background_url = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Everlasting_Summer/images/1920/in_telegram_images/Save_Menu.png"
 
 
 @loader.tds
