@@ -1,14 +1,19 @@
 # meta developer: @H_SunMods
 # meta banner: https://r2.fakecrime.bio/uploads/7c43eb05-4387-48f8-bbb2-20c5fad2f85f.jpg
 # current ver
-__version__ = (1, 0, 0)
+__version__ = (1, 0, 1)
  
 from .. import loader, utils
 from herokutl.types import Message
 from ..types import InlineCall
+import asyncio
 import aiohttp
 import math
  
+FHETA_URL = "https://api.fixyres.com/grates"
+VECTOR_URL = "https://vector-three-sooty.vercel.app/api/devstats"
+VECTOR_TOPMOD_URL = "https://vector-three-sooty.vercel.app/api/usertopmod?users="
+
 @loader.tds
 class DevStats(loader.Module):
     """developers stats module"""
@@ -55,6 +60,12 @@ class DevStats(loader.Module):
  
     def __init__(self):
         self.config = loader.ModuleConfig(
+            loader.ConfigValue(
+                "provider",
+                "multi",
+                "Data source: multi (fheta + vector combined) | fheta | vector",
+                validator=loader.validators.Choice(["multi", "fheta", "vector"]),
+            ),
             loader.ConfigValue(
                 "display_mode",
                 "likes",
@@ -122,7 +133,53 @@ class DevStats(loader.Module):
             devs[author]["likes"] += int(info.get("likes", 0) or 0)
             devs[author]["dislikes"] += int(info.get("dislikes", 0) or 0)
         return sorted(devs.items(), key=lambda x: x[1]["likes"], reverse=True)
- 
+
+    def aggregate_vector(self, data: list) -> list:
+        excluded = {u.lower() for u in self.config["excluded_authors"]}
+        devs = {}
+        for entry in data:
+            author = entry.get("author", "").lstrip("@")
+            if not author or author.lower() in excluded:
+                continue
+            if author not in devs:
+                devs[author] = {"likes": 0, "dislikes": 0}
+            devs[author]["likes"] += int(entry.get("likes", 0) or 0)
+            devs[author]["dislikes"] += int(entry.get("dislikes", 0) or 0)
+        return sorted(devs.items(), key=lambda x: x[1]["likes"], reverse=True)
+
+    def merge_sources(self, fheta_devs: list, vector_devs: list) -> list:
+        merged = {}
+        for username, stats in fheta_devs:
+            merged[username.lower()] = {"name": username, "likes": stats["likes"], "dislikes": stats["dislikes"]}
+        for username, stats in vector_devs:
+            key = username.lower()
+            if key in merged:
+                merged[key]["likes"] += stats["likes"]
+                merged[key]["dislikes"] += stats["dislikes"]
+            else:
+                merged[key] = {"name": username, "likes": stats["likes"], "dislikes": stats["dislikes"]}
+        result = [(v["name"], {"likes": v["likes"], "dislikes": v["dislikes"]}) for v in merged.values()]
+        return sorted(result, key=lambda x: x[1]["likes"], reverse=True)
+
+    async def fetch_sorted_devs(self) -> list:
+        provider = self.config["provider"]
+        if provider == "fheta":
+            data = await self.request_api(FHETA_URL)
+            return self.aggregate_devs(data) if data else []
+        if provider == "vector":
+            data = await self.request_api(VECTOR_URL)
+            return self.aggregate_vector(data) if isinstance(data, list) else []
+        # multi
+        fheta_data, vector_data = await asyncio.gather(
+            self.request_api(FHETA_URL),
+            self.request_api(VECTOR_URL),
+        )
+        fheta_devs = self.aggregate_devs(fheta_data) if fheta_data else []
+        vector_devs = self.aggregate_vector(vector_data) if isinstance(vector_data, list) else []
+        if not fheta_devs and not vector_devs:
+            return []
+        return self.merge_sources(fheta_devs, vector_devs)
+
     def extract_module_name(self, key: str) -> str:
         return key.strip().split("/")[-1].removesuffix(".py")
  
@@ -131,10 +188,6 @@ class DevStats(loader.Module):
         lw = self.strings["like_singl"] if likes == 1 else self.strings["just_likes"]
         if mode == "both":
             return f"({likes} {lw} | {dislikes} {self.strings['just_dislikes']})"
-        # if mode == "procents":
-        #     total = likes + dislikes
-        #     pct = round(likes / total * 100) if total > 0 else 0
-        #     return f"({pct}%)"
         return f"({likes} {lw})"
  
     def dev_entry(self, rank: int, username: str, likes: int, dislikes: int) -> str:
@@ -179,10 +232,10 @@ class DevStats(loader.Module):
         usernames = {u.lstrip("@").lower() for u in self.config["usernames"]}
         if not usernames:
             return self.strings["no_usernames"]
-        data = await self.request_api("https://api.fixyres.com/grates")
-        if not data:
+        sorted_devs = await self.fetch_sorted_devs()
+        if not sorted_devs:
             return self.strings["no_data"]
-        for rank, (username, _) in enumerate(self.aggregate_devs(data), 1):
+        for rank, (username, _) in enumerate(sorted_devs, 1):
             if username.lower() in usernames:
                 return f"{rank}"
         return self.strings["devtop_not_found"]
@@ -191,7 +244,18 @@ class DevStats(loader.Module):
         usernames = {u.lstrip("@").lower() for u in self.config["usernames"]}
         if not usernames:
             return self.strings["no_usernames"]
-        data = await self.request_api("https://api.fixyres.com/grates")
+
+        provider = self.config["provider"]
+        joined_usernames = ",".join(sorted(usernames))
+
+        if provider in {"vector", "multi"}:
+            data = await self.request_api(f"{VECTOR_TOPMOD_URL}{joined_usernames}")
+            if isinstance(data, dict) and data.get("name") and data.get("rank"):
+                return f"{data['name']} ({data['rank']})"
+            if provider == "vector":
+                return self.strings["topmod_not_found"] if data else self.strings["no_data"]
+
+        data = await self.request_api(FHETA_URL)
         if not data:
             return self.strings["no_data"]
         all_sorted = sorted(
@@ -221,8 +285,7 @@ class DevStats(loader.Module):
     async def devstats(self, message: Message):
         """Top Developers statistics"""
         await utils.answer(message, self.strings["loading"])
-        data = await self.request_api("https://api.fixyres.com/grates")
-        sorted_devs = self.aggregate_devs(data) if data else []
+        sorted_devs = await self.fetch_sorted_devs()
         if not sorted_devs:
             return await utils.answer(message, self.strings["no_data"])
         total_pages = max(1, math.ceil(len(sorted_devs) / 10))
