@@ -6,7 +6,7 @@
 # meta banner: https://r2.fakecrime.bio/uploads/ddf03169-09fe-4eb1-8eea-bad1a4cc4ada.jpg
 # meta fhsdesc: Spotify, downloader, music, музыка, спотифай,скачать музыку
 # это не должно было быть в релизе,но ладно я потом пофикшу все и вся в говнокоде.
-__version__ = (1, 1, 0)
+__version__ = (1, 1, 1)
 
 import asyncio
 import httpx
