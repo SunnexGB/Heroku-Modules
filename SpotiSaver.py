@@ -31,10 +31,12 @@ class SpotiSaver(loader.Module):
     """Downloading music from Spotify"""
     strings = {
         "name": "SpotiSaver",
-        "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> link to song is not specified</b>",
+        # "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> link to song is not specified</b>",
         "downloading": "<b><tg-emoji emoji-id=5443127283898405358>📥</tg-emoji> Downloading:</b> <code>{}</code>",
         "error": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Error, see logs!</b>",
         "done": "<b><tg-emoji emoji-id=5206607081334906820>✔️</tg-emoji> Done!</b>",
+        "no_spotifymod": "<tg-emoji emoji-id=5431402435497181911>💢</tg-emoji> <b>SpotifyMod not found.</b>",
+        "no_spotify": "<tg-emoji emoji-id=5429164207780152924>😅</tg-emoji> <b>Nothing is playing on Spotify.</b>",
         "nf_id": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> ID key not found!</b>",
         "nf_track": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Song not found.</b>",
         "timeout": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> timeout! Try again.</b>",
@@ -43,10 +45,12 @@ class SpotiSaver(loader.Module):
     strings_ru = {
         "name": "SpotiSaver",
         "_cls_doc": "Скачивание музыки из Spotify",
-        "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Ссылка на песню не указана</b>",
+        # "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Ссылка на песню не указана</b>",
         "downloading": "<b><tg-emoji emoji-id=5443127283898405358>📥</tg-emoji> Скачиваю:</b> <code>{}</code>",
         "error": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Ерорь, смотри логи!</b>",
         "done": "<b><tg-emoji emoji-id=5206607081334906820>✔️</tg-emoji> Готово!</b>",
+        "no_spotifymod": "<tg-emoji emoji-id=5431402435497181911>💢</tg-emoji> <b>SpotifyMod не найден.</b>",
+        "no_spotify": "<tg-emoji emoji-id=5429164207780152924>😅</tg-emoji> <b>В Spotify ничего не играет.</b>",
         "nf_id": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> ID песни не найден</b>",
         "nf_track": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Песня не найдена</b>",
         "timeout": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Таймаут! Попробуй ещё раз.</b>",
@@ -73,12 +77,27 @@ class SpotiSaver(loader.Module):
             raise ValueError("CSRF token not found")
         return match.group(1)
 
+    async def get_current_spotify_url(self) -> str | None:
+            spotifymod = self.lookup("SpotifyMod")
+            if not spotifymod or not spotifymod.sp:
+                return None
+            current_playback = await asyncio.to_thread(spotifymod.sp.current_playback)
+            if not current_playback or not current_playback.get("is_playing"):
+                return None
+            track_id = current_playback["item"]["id"]
+            return f"https://open.spotify.com/track/{track_id}"
+
     @loader.command(ru_doc="<ссылка> — Скачать трек из Spotify")
     async def spotsave(self, message: Message):
         """<link> - Download track from Spotify"""
         args = utils.get_args_raw(message)
         if not args:
-            return await utils.answer(message, self.strings["args"])
+            spotifymod = self.lookup("SpotifyMod")
+            if not spotifymod or not spotifymod.sp:
+                return await utils.answer(message, self.strings["no_spotifymod"])
+            args = await self.get_current_spotify_url()
+            if not args:
+                return await utils.answer(message, self.strings["no_spotify"])
         if "track/" not in args:
             return await utils.answer(message, self.strings["nf_id"])
         track_url = args.split("?")[0]
@@ -164,7 +183,6 @@ class SpotiSaver(loader.Module):
                 )
 
                 await message.delete()
-
                 if os.path.exists(filename):
                     os.remove(filename)
 
