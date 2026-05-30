@@ -1,8 +1,7 @@
-# meta developer: @SunnexGB
+# meta developer: @H_SunMods
 # meta pic: https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Hangman/10.png
 # meta banner: https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/Hangman/10.png
 # meta fhsdesc: Game, Игра, Hangman, Висилица
-# все же я не знаю трек или сонг, так что пусть будет трек, а не сонг потому что интуитивнее поняттнее,наверное?
 # крутой баннер да?
 
 #current version
