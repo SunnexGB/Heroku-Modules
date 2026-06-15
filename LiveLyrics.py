@@ -4,6 +4,8 @@
 # meta banner: https://r2.fakecrime.bio/uploads/6725e5a0-0c9e-48ed-be85-dfd857c2aa5f.jpg
 # meta fhsdesc: Spotify, YaMusic, music, музыка, Lyrics, слова, текст, трек, песня
 
+__version__ = (1, 0, 0)
+
 from herokutl.types import Message
 from .. import loader, utils
 from ..types import InlineCall
