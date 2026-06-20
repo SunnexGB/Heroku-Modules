@@ -1,24 +1,20 @@
-# requires: aiohttp pyngrok
+# requires: aiohttp
 # meta developer: @H_SunMods
 # meta banner: https://r2.fakecrime.bio/uploads/965a3206-4609-4dff-beb0-6831f8b90e12.jpg
 # current ver
-__version__ = (0, 1, 0)
+__version__ = (0, 1, 1)
 
 import json
 import socket
 import asyncio
 import secrets
 import logging
+import re
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from aiohttp import ClientSession, ClientTimeout, web
 from herokutl.types import Message
-from pyngrok import conf, ngrok
 from .. import loader, utils
 from ..inline.types import InlineCall
-
-logging.getLogger("pyngrok").setLevel(logging.WARNING)
-logging.getLogger("pyngrok.process").setLevel(logging.WARNING)
-logging.getLogger("pyngrok.process.ngrok").setLevel(logging.WARNING)
 
 html_raw = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/Assets/NoChess/raw_assets/index.html"
 css_raw = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/Assets/NoChess/raw_assets/style.css"
@@ -30,7 +26,6 @@ botfather_photo_url = "https://r2.fakecrime.bio/uploads/d3e16245-15a2-43f1-b176-
 class NoChess(loader.Module):
     """NoChess - web module that allows u to launch a web page either as a functional HTML page or as a Telegram Mini-App. This is an add-on for Chess module by @nullmod"""
 
-    # я пытался кароче сделать тут перевод делая реплейсы в зависимости от стрингов,но это не работает,поэтому да
     strings = {
         "name": "NoChess",
         "starting": "( ﾉ･ｪ･ )ﾉ <b>Starting NoChess...</b>",
@@ -38,8 +33,7 @@ class NoChess(loader.Module):
         "already_running": "ʕᵕᴥᵕʔ <b>NoChess is already running</b>",
         "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess stopped",
         "not_running": "(✿╹◡╹) NoChess is not running",
-        "ngrok_missing": "Set a <code>ngrok_token</code>",
-        "ngrok_error": "Ngrok start error: <code>{}</code>",
+        "tunnel_error": "Serveo tunnel error: <code>{}</code>",
         "asset_read_error": "Failed to load web assets: <code>{}</code>",
         "open_button": "Open mini-app",
         "stop_button": "Stop",
@@ -59,8 +53,7 @@ class NoChess(loader.Module):
         "already_running": "ʕᵕᴥᵕʔ <b>NoChess уже запущен</b>",
         "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess остановлен",
         "not_running": "(✿╹◡╹) NoChess не запущен",
-        "ngrok_missing": "Укажи <code>ngrok_token</code>",
-        "ngrok_error": "Ошибка запуска ngrok: <code>{}</code>",
+        "tunnel_error": "Ошибка туннеля Serveo: <code>{}</code>",
         "asset_read_error": "Не удалось загрузить веб-ассеты: <code>{}</code>",
         "open_button": "Открыть мини-приложение",
         "stop_button": "Остановить",
@@ -73,6 +66,146 @@ class NoChess(loader.Module):
         "not_supported_platform": "(┬┬＿┬┬) К сожалению, на эту платформу невозможно установить этот модуль.\n\n(〜^∇^)〜 Это не ошибка, пожалуйста, не обращайтесь в поддержку."
     }
 
+    strings_de = {
+        "_cls_doc": "NoChess - Webmodul zum Starten einer Webseite als HTML oder Telegram Mini-App. Erweiterung für Chess von @nullmod",
+        "starting": "( ﾉ･ｪ･ )ﾉ <b>Starte NoChess...</b>",
+        "online": "(*˘︶˘*) <b>NoChess läuft</b>",
+        "already_running": "ʕᵕᴥᵕʔ <b>NoChess läuft bereits</b>",
+        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess gestoppt",
+        "not_running": "(✿╹◡╹) NoChess läuft nicht",
+        "tunnel_error": "Serveo-Tunnel-Fehler: <code>{}</code>",
+        "asset_read_error": "Fehler beim Laden der Web-Assets: <code>{}</code>",
+        "open_button": "Mini-App öffnen",
+        "stop_button": "Stopp",
+        "about_text": "<b>Wichtig zu lesen:</b>\nManchmal startet der Server nicht, weil zu viele Prozesse laufen. <code>cma</code> richtet die App über eine Vorlage ein, musst einige Web-App-Einstellungen selbst setzen.\nUnd außerdem:\n    1. Erster Start beginnt direkt mit einem Seitenlink, nicht als Web-App\n    2. Verwende <code>nochess</code> und dann <code>cma</code> zum Einrichten\n    3. Danach Prozess neustarten mit <code>nochess -kill</code> und nochmal <code>nochess</code>\nPre-Alpha, später 1.0.0 falls die Leute die Idee mögen.",
+        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>Erstelle Mini-App im BotFather...</b>",
+        "cma_need_url": "Setze zuerst die Mini-App-Web-URL oder führe <code>.nochess</code> aus.",
+        "cma_done": "(*˘︶˘*) <b>Fertig.</b>",
+        "cma_error": "Fehler: <code>{}</code>",
+        "RuntimeError": "Inline-Bot-Benutzername nicht gefunden",
+        "not_supported_platform": "(┬┬＿┬┬) Leider unmöglich, dieses Modul auf dieser Plattform zu installieren.\n\n(〜^∇^)〜 Kein Fehler, Support nicht kontaktieren."
+    }
+
+    strings_ua = {
+        "_cls_doc": "NoChess - Веб модуль для запуску веб-сторінки як HTML або Telegram Mini-App. Доповнення до Chess від @nullmod",
+        "starting": "( ﾉ･ｪ･ )ﾉ <b>Запуск NoChess...</b>",
+        "online": "(*˘︶˘*) <b>NoChess запущено</b>",
+        "already_running": "ʕᵕᴥᵕʔ <b>NoChess вже запущено</b>",
+        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess зупинено",
+        "not_running": "(✿╹◡╹) NoChess не запущено",
+        "tunnel_error": "Помилка тунелю Serveo: <code>{}</code>",
+        "asset_read_error": "Не вдалося завантажити веб-ассети: <code>{}</code>",
+        "open_button": "Відкрити міні-застосунок",
+        "stop_button": "Зупинити",
+        "about_text": "<b>Важливо прочитати:</b>\nІноді сервер не запускається через забагато процесів. <code>cma</code> налаштовує за шаблоном — налаштуйте веб-застосунок самостійно.\nА ще:\n    1. Перший запуск — одразу посилання на сайт, не веб-застосунок\n    2. Використовуйте <code>nochess</code>, потім <code>cma</code> для налаштування\n    3. Перезапустіть процес: <code>nochess -kill</code>, потім <code>nochess</code>\nПре-альфа, пізніше 1.0.0 якщо ідея сподобається.",
+        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>Створюю міні-застосунок через BotFather...</b>",
+        "cma_need_url": "Спочатку вкажи URL або запусти <code>.nochess</code>",
+        "cma_done": "(*˘︶˘*) <b>Готово.</b>",
+        "cma_error": "Помилка: <code>{}</code>",
+        "RuntimeError": "юзернейм інлайн-бота не знайдено",
+        "not_supported_platform": "(┬┬＿┬┬) На жаль, неможливо встановити цей модуль на цю платформу.\n\n(〜^∇^)〜 Це не помилка, не звертайтесь у підтримку."
+    }
+
+    strings_jp = {
+        "_cls_doc": "NoChess - HTMLまたはTelegram Mini-Appとしてページを起動するモジュール。Chess（@nullmod）のアドオン",
+        "starting": "( ﾉ･ｪ･ )ﾉ <b>NoChessを起動中...</b>",
+        "online": "(*˘︶˘*) <b>NoChessは実行中です</b>",
+        "already_running": "ʕᵕᴥᵕʔ <b>NoChessはすでに実行中です</b>",
+        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChessを停止しました",
+        "not_running": "(✿╹◡╹) NoChessは実行されていません",
+        "tunnel_error": "Serveoトンネルエラー: <code>{}</code>",
+        "asset_read_error": "Webアセットの読み込みに失敗: <code>{}</code>",
+        "open_button": "ミニアプリを開く",
+        "stop_button": "停止",
+        "about_text": "<b>重要なお知らせ:</b>\nプロセスが多すぎてサーバーが起動しないことがあります。<code>cma</code>はテンプレートでアプリをセットアップしますが歪なので自分で設定してください。\nさらに:\n    1. 最初の起動はWebアプリではなくサイトリンクで開始\n    2. <code>nochess</code>を使い、<code>cma</code>で設定\n    3. <code>nochess -kill</code>してから再度<code>nochess</code>\nプレアルファ版、後で1.0.0に変更予定。",
+        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>BotFatherでミニアプリを作成中...</b>",
+        "cma_need_url": "最初にミニアプリのURLを設定するか、<code>.nochess</code>を実行してください",
+        "cma_done": "(*˘︶˘*) <b>完了。</b>",
+        "cma_error": "エラー: <code>{}</code>",
+        "RuntimeError": "インラインボットのユーザー名が見つかりません",
+        "not_supported_platform": "(┬┬＿┬┬) このプラットフォームにはインストールできません。\n\n(〜^∇^)〜 エラーではありません。サポートに連絡しないでください。"
+    }
+
+    strings_neofit = {
+        "_cls_doc": "NoChess — web module fer launchin' a page as HTML or Telegram Mini-App. Add-on fer Chess by @nullmod",
+        "starting": "( ﾉ･ｪ･ )ﾉ <b>Spinnin' up NoChess...</b>",
+        "online": "(*˘︶˘*) <b>NoChess is live, fam</b>",
+        "already_running": "ʕᵕᴥᵕʔ <b>NoChess already cookin'</b>",
+        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess iced",
+        "not_running": "(✿╹◡╹) NoChess ain't up",
+        "tunnel_error": "Serveo tunnel bricked: <code>{}</code>",
+        "asset_read_error": "Couldn't snag web assets: <code>{}</code>",
+        "open_button": "Pop the mini-app",
+        "stop_button": "Cut it",
+        "about_text": "<b>RTFM:</b>\nBox won't lift sometimes 'cause too many procs — just reboot. <code>cma</code> uses a jank template so tweak config yerself.\nAlso:\n    1. First run = site link, not web app\n    2. Hit <code>nochess</code> then <code>cma</code> to rig it\n    3. Bounce the proc with <code>nochess -kill</code> + <code>nochess</code>\nPre-alpha slop, gonna bump to 1.0.0 if peeps vibe.",
+        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>Forgin' mini app via BotFather...</b>",
+        "cma_need_url": "Drop a mini-app URL first or run <code>.nochess</code>",
+        "cma_done": "(*˘︶˘*) <b>Ship it.</b>",
+        "cma_error": "L + ratio: <code>{}</code>",
+        "RuntimeError": "inline bot handle MIA",
+        "not_supported_platform": "(┬┬＿┬┬) No shot installin' here.\n\n(〜^∇^)〜 Not a bug, don't ping support."
+    }
+
+    strings_tiktok = {
+        "_cls_doc": "NoChess — веб-модуль запускает страничку как HTML или мини-апп в телеге. Аддон к Chess от @nullmod",
+        "starting": "( ﾉ･ｪ･ )ﾉ <b>Газуем NoChess...</b>",
+        "online": "(*˘︶˘*) <b>NoChess на стиле</b>",
+        "already_running": "ʕᵕᴥᵕʔ <b>NoChess уже тащит</b>",
+        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess слился",
+        "not_running": "(✿╹◡╹) NoChess не в теме",
+        "tunnel_error": "Serveo тунель крашнулся: <code>{}</code>",
+        "asset_read_error": "Не смог забрать ассеты: <code>{}</code>",
+        "open_button": "Открыть мини-апп",
+        "stop_button": "Стопэ",
+        "about_text": "<b>Читни сюда:</b>\nБывает серв не поднимается — процов дофига, ребутаю. <code>cma</code> сетапит криво, конфиг руками.\nИ ещё:\n    1. Первый запуск — сразу ссылка на сайт, не апп\n    2. Юзай <code>nochess</code>, потом <code>cma</code>\n    3. Дропни через <code>nochess -kill</code> и снова <code>nochess</code>\nПре-альфа дичь, потом 1.0.0 если залетит.",
+        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>Делаю мини-апп через BotFather...</b>",
+        "cma_need_url": "Сначала кинь URL или жмякни <code>.nochess</code>",
+        "cma_done": "(*˘︶˘*) <b>Запилил.</b>",
+        "cma_error": "Ой фейл: <code>{}</code>",
+        "RuntimeError": "юз бота не нашли",
+        "not_supported_platform": "(┬┬＿┬┬) Сорян, на эту платформу модуль не встанет.\n\n(〜^∇^)〜 Не ошибка, в саппорт не пиши."
+    }
+
+    strings_leet = {
+        "_cls_doc": "NoChess — w3b m0dul3 t0 l4unch p4g3 4s HTML 0r T3l3gr4m M1n1-4pp. 4dd-0n f0r Ch355 by @nullm0d",
+        "starting": "( ﾉ･ｪ･ )ﾉ <b>B00t1ng N0Ch355...</b>",
+        "online": "(*˘︶˘*) <b>N0Ch355 15 1n th3 m4tr1x</b>",
+        "already_running": "ʕᵕᴥᵕʔ <b>N0Ch355 4lr34dy 0n</b>",
+        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ N0Ch355 t3rm1n4t3d",
+        "not_running": "(✿╹◡╹) N0Ch355 0ffl1n3",
+        "tunnel_error": "S3rv30 tunn3l f41l: <code>{}</code>",
+        "asset_read_error": "F41l3d t0 f3tch w3b 4553t5: <code>{}</code>",
+        "open_button": "0p3n m1n1-4pp",
+        "stop_button": "K1ll",
+        "about_text": "<b>R34D TH15:</b>\nB0x w0n't l1ft cuz 2 m4ny pr0c5 — r3b00t. <c0d3>cm4</c0d3> j4nk t3mpl4t3, c0nf1g m4nu4lly.\n4l50:\n    1. F1r5t run = 51t3 l1nk, n0t w3b 4pp\n    2. U53 <c0d3>n0ch355</c0d3> + <c0d3>cm4</c0d3>\n    3. B0unc3 w1th <c0d3>n0ch355 -k1ll</c0d3> + <c0d3>n0ch355</c0d3>\nPr3-4lph4, bump1n t0 1.0.0 1f p33p5 v1b3.",
+        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>C0njur1n9 m1n1 4pp v14 B0tF4th3r...</b>",
+        "cma_need_url": "Dr0p 4 URL f1r5t 0r run <c0d3>.n0ch355</c0d3>",
+        "cma_done": "(*˘︶˘*) <b>5h1pp3d.</b>",
+        "cma_error": "F41l: <code>{}</code>",
+        "RuntimeError": "1nl1n3 b0t h4ndl3 n0t f0und",
+        "not_supported_platform": "(┬┬＿┬┬) N0 5h0t 1n5t4ll1n' h3r3.\n\n(〜^∇^)〜 N0t 4 bu9, d0n't p1n9 5upp0rt."
+    }
+
+    strings_uwu = {
+        "_cls_doc": "NoChess — web moduwe tuwu waunch a page as HTML owr Tewegwam Minyi-App. Add-on fowr Chess by @nuwwmod~",
+        "starting": "( ﾉ･ｪ･ )ﾉ <b>Spinning up NoChess-chan...</b>",
+        "online": "(*˘︶˘*) <b>NoChess is wunning, nyaa~</b>",
+        "already_running": "ʕᵕᴥᵕʔ <b>NoChess awweady wunning, hehe</b>",
+        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess went bye-bye",
+        "not_running": "(✿╹◡╹) NoChess is sweepy...",
+        "tunnel_error": "Serveo tunnew-bun oopsie: <code>{}</code>",
+        "asset_read_error": "Couwdn't fetch the pwetty assets: <code>{}</code>",
+        "open_button": "Open minyi-app~",
+        "stop_button": "Stahp pwease",
+        "about_text": "<b>Pwease wead cawefuwwy:</b>\nSewvew won't wake up cuz too many pwocesses. <code>cma</code> setups fwom wonky tempwate, tweak config yuwsewf.\nAwso:\n    1. Fiwst waunch = site wink, not web app\n    2. Use <code>nochess</code>, den <code>cma</code>\n    3. Westawt wiff <code>nochess -kill</code> + <code>nochess</code>\nPwe-awpha, watew 1.0.0 if peopwe wike~. ",
+        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>Making minyi-app in BotFather-chan...</b>",
+        "cma_need_url": "Set URL fiwst owr wun <code>.nochess</code>, pwease~",
+        "cma_done": "(*˘︶˘*) <b>Aww done, nya!</b>",
+        "cma_error": "Oopsie woopsie: <code>{}</code>",
+        "RuntimeError": "inyine bot usewnyame nyot found",
+        "not_supported_platform": "(┬┬＿┬┬) Unfowtunyatewy, can't instaww hewe.\n\n(〜^∇^)〜 Nyot an ewwow, don't contact suppowt."
+    }
+
     async def client_ready(self):
         platform = utils.get_named_platform()
         if platform in ("HikkaHost"):
@@ -81,10 +214,10 @@ class NoChess(loader.Module):
     def __init__(self):
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
-                "ngrok_token",
-                None,
-                "Token from ngrok.com | Токен полученый на ngrok.com",
-                validator=loader.validators.Hidden(),
+                "serveo_subdomain",
+                "",
+                "Custom serveo subdomain (leave empty for random) | Кастомный поддомен serveo (оставь пустым для случайного)",
+                validator=loader.validators.String(),
             ),
             loader.ConfigValue(
                 "mini_app_url",
@@ -117,7 +250,7 @@ class NoChess(loader.Module):
             ),
             loader.ConfigValue(
                 "result_win", 
-              "#00BE16", 
+               "#00BE16", 
                 "Winner color | Блок цвета победителя",
                 validator=loader.validators.String()
             ),
@@ -146,6 +279,11 @@ class NoChess(loader.Module):
         self.access_token = None
         self.games_cache = []
         self.games_dump = ""
+        self._serveo_proc = None
+        self._assets_lock = asyncio.Lock()
+        self._assets_html = None
+        self._assets_css = None
+        self._assets_js = None
 
     def theme_config_dict(self):
         return {
@@ -238,10 +376,18 @@ class NoChess(loader.Module):
                 return await response.text()
 
     async def load_web_assets(self):
-        html = await self.read_remote_asset(html_raw)
-        css = await self.read_remote_asset(css_raw)
-        js = await self.read_remote_asset(js_raw)
-        return html, css, js
+        async with self._assets_lock:
+            if self._assets_html is not None:
+                return self._assets_html, self._assets_css, self._assets_js
+            html, css, js = await asyncio.gather(
+                self.read_remote_asset(html_raw),
+                self.read_remote_asset(css_raw),
+                self.read_remote_asset(js_raw),
+            )
+            self._assets_html = html
+            self._assets_css = css
+            self._assets_js = js
+            return html, css, js
 
     def localication_script(self):
         return (
@@ -304,17 +450,89 @@ class NoChess(loader.Module):
             return web.json_response({"error": "Unauthorized"}, status=401)
         return web.json_response(await self.get_me_json())
 
+    async def _kill_serveo(self):
+        proc = self._serveo_proc
+        if proc and proc.returncode is None:
+            try:
+                proc.terminate()
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=3)
+                except asyncio.TimeoutError:
+                    proc.kill()
+                    await proc.wait()
+            except ProcessLookupError:
+                pass
+        self._serveo_proc = None
+
     async def stop_server(self):
         was_running = bool(self.runner)
-        try:
-            ngrok.kill()
-        except Exception:
-            pass
+        await self._kill_serveo()
         if self.runner:
             await self.runner.cleanup()
             self.runner = None
         self.tunnel_url = None
         return was_running
+
+    @staticmethod
+    def _strip_ansi(s):
+        return re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', s)
+
+    async def _start_serveo(self, port):
+        subdomain = (self.config["serveo_subdomain"] or "").strip()
+        if subdomain:
+            remote = f"{subdomain}:80:localhost:{port}"
+        else:
+            remote = f"80:localhost:{port}"
+
+        cmd = [
+            "ssh", "-T",
+            "-o", "StrictHostKeyChecking=accept-new",
+            "-o", "ServerAliveInterval=60",
+            "-o", "ExitOnForwardFailure=yes",
+            "-o", "ConnectTimeout=15",
+            "-R", remote,
+            "serveo.net",
+        ]
+
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+
+        self._serveo_proc = proc
+
+        url = None
+        deadline = asyncio.get_event_loop().time() + 20
+        buf = b""
+        while asyncio.get_event_loop().time() < deadline:
+            try:
+                line = await asyncio.wait_for(proc.stdout.readline(), timeout=0.5)
+            except asyncio.TimeoutError:
+                if proc.returncode is not None:
+                    buf_str = self._strip_ansi(buf.decode(errors="replace"))
+                    raise RuntimeError(f"SSH exited {proc.returncode}: {buf_str}")
+                continue
+
+            if not line:
+                if proc.returncode is not None:
+                    buf_str = self._strip_ansi(buf.decode(errors="replace"))
+                    raise RuntimeError(f"SSH exited {proc.returncode}: {buf_str}")
+                await asyncio.sleep(0.5)
+                continue
+
+            buf += line
+            line_str = self._strip_ansi(line.decode(errors="replace"))
+            match = re.search(r'https?://[\w.-]+\.serveo(?:usercontent)?\.(?:net|com)', line_str)
+            if match:
+                url = match.group(0).rstrip("/")
+                break
+
+        if not url:
+            buf_str = self._strip_ansi(buf.decode(errors="replace"))
+            raise RuntimeError(f"No serveo URL received: {buf_str}")
+
+        return url
 
     async def send_form(self, message, url):
         await self.inline.form(
@@ -340,7 +558,16 @@ class NoChess(loader.Module):
             except Exception:
                 pass
 
-    @loader.command(ru_doc="[-kill] Вызываь веб интерфейс для просмотра партии")
+    @loader.command(
+        ru_doc="[-kill] Вызвать веб интерфейс для просмотра партии",
+        de_doc="[-kill] Webinterface zum Anzeigen der Partie aufrufen",
+        ua_doc="[-kill] Викликати веб інтерфейс для перегляду партії",
+        jp_doc="[-kill] チェスゲームを表示するウェブインターフェースを呼び出す",
+        neofit_doc="[-kill] Yeet the web ui 2 render a game",
+        tiktok_doc="[-kill] Открыть веб-вьюху шахмат, no 🧢",
+        leet_doc="[-kill] C4ll w3b 1nt3rf4c3 f0r ch355 v13w",
+        uwu_doc="[-kiww] Caww web intewface fow chess viewie~",
+    )
     async def nochess(self, message: Message):
         """[-kill] Call web interface to view chess game"""
         try:
@@ -349,7 +576,7 @@ class NoChess(loader.Module):
             await self.stop_server()
             return await utils.answer(
                 message,
-                self.strings["ngrok_error"].format(utils.escape_html(str(error))),
+                self.strings["tunnel_error"].format(utils.escape_html(str(error))),
             )
 
     async def nochess_args(self, message: Message):
@@ -369,8 +596,6 @@ class NoChess(loader.Module):
             if access:
                 await self.send_form(message, access)
             return
-        if not self.config["ngrok_token"] and (not mini_url or is_tg_direct):
-            return await utils.answer(message, self.strings["ngrok_missing"])
         await self.refresh_games_cache()
         await utils.answer(message, self.strings["starting"])
         self.ensure_access_token()
@@ -386,17 +611,12 @@ class NoChess(loader.Module):
         await self.runner.setup()
         await web.TCPSite(self.runner, "127.0.0.1", port).start()
         try:
-            if self.config["ngrok_token"]:
-                conf.get_default().auth_token = self.config["ngrok_token"]
-                tunnel = ngrok.connect(port)
-                self.tunnel_url = tunnel.public_url.rstrip("/")
-            else:
-                self.tunnel_url = mini_url
+            self.tunnel_url = await self._start_serveo(port)
         except Exception as error:
             await self.stop_server()
             return await utils.answer(
                 message,
-                self.strings["ngrok_error"].format(utils.escape_html(str(error))),
+                self.strings["tunnel_error"].format(utils.escape_html(str(error))),
             )
         if is_tg_direct:
             access_url = mini_url
@@ -405,7 +625,16 @@ class NoChess(loader.Module):
             access_url = f"{base}/?token={self.access_token}" if base and self.access_token else base
         await self.send_form(message, access_url)
 
-    @loader.command(ru_doc="Создает и настраивает эпку")
+    @loader.command(
+        ru_doc="Создаёт и настраивает мини-приложение через BotFather",
+        de_doc="Erstellt und konfiguriert Mini-App via BotFather",
+        ua_doc="Створює і налаштовує міні-застосунок через BotFather",
+        jp_doc="BotFather経由でミニアプリを作成・設定します",
+        neofit_doc="Sp00n-feed BotFather 2 forge ya mini app",
+        tiktok_doc="Делает мини-апп через BotFather, изи",
+        leet_doc="Cr34t3 & c0nf19 m1n1-4pp v14 B0tF4th3r",
+        uwu_doc="Cweates & configuwes mini-app via BotFathew~",
+    )
     async def cma(self, message: Message):
         """Create and setup mini-app"""
         raw_args = (utils.get_args_raw(message) or "").strip()
@@ -479,7 +708,16 @@ class NoChess(loader.Module):
         except Exception as error:
             await utils.answer(message, self.strings["cma_error"].format(utils.escape_html(str(error))))
 
-    @loader.command(ru_doc="ВАЖНО К ПРОЧТЕНИЮ")
+    @loader.command(
+        ru_doc="ВАЖНО К ПРОЧТЕНИЮ",
+        de_doc="WICHTIG ZU LESEN",
+        ua_doc="ВАЖЛИВО ДО ПРОЧИТАННЯ",
+        jp_doc="重要なお知らせ",
+        neofit_doc="RTFM BRO",
+        tiktok_doc="ЧИТНИ СЮДА",
+        leet_doc="R34D TH15",
+        uwu_doc="WEAD ME!!",
+    )
     async def about(self, message: Message):
         """IMPORTANT READING"""
         await utils.answer(message, self.strings["about_text"])
