@@ -481,10 +481,20 @@ class NoChessMod(loader.Module):
 
     async def _start_tunnel(self, port):
         await self._kill_tunnel()
-        cf_bin = self._find_cloudflared()
+        cf_bin = await self._find_or_download_cloudflared()
         if cf_bin:
             return await self._start_cloudflared(cf_bin, port)
         return await self._start_serveo_fallback(port)
+
+    def _get_asset_dir(self):
+        from pathlib import Path
+        try:
+            base = Path(__spec__.origin).parent if __spec__ and __spec__.origin else Path().resolve()
+        except Exception:
+            base = Path().resolve()
+        d = base / "Assets" / "NoChess"
+        d.mkdir(parents=True, exist_ok=True)
+        return str(d)
 
     def _find_cloudflared(self):
         import os as _os
@@ -493,15 +503,35 @@ class NoChessMod(loader.Module):
             "/usr/local/bin/cloudflared",
             "/usr/bin/cloudflared",
         ]
-        try:
-            mod_dir = str(Path(__spec__.origin).parent) if __spec__ and __spec__.origin else str(Path().resolve())
-            paths.insert(0, _os.path.join(mod_dir, "cloudflared"))
-        except Exception:
-            pass
+        asset_dir = self._get_asset_dir()
+        paths.insert(0, _os.path.join(asset_dir, "cloudflared"))
         for p in paths:
             if _os.path.isfile(p) and _os.access(p, _os.X_OK):
                 return p
         return None
+
+    async def _find_or_download_cloudflared(self):
+        found = self._find_cloudflared()
+        if found:
+            return found
+        import os as _os
+        asset_dir = self._get_asset_dir()
+        dest = _os.path.join(asset_dir, "cloudflared")
+        url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+        proc = await asyncio.create_subprocess_exec(
+            "curl", "-sL", "-o", dest, url,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=60)
+        except asyncio.TimeoutError:
+            proc.kill()
+            return None
+        if proc.returncode != 0 or not _os.path.isfile(dest):
+            return None
+        _os.chmod(dest, 0o755)
+        return dest
 
     async def _start_cloudflared(self, cf_bin, port):
         cmd = [cf_bin, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{port}"]
