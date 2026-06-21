@@ -241,6 +241,7 @@ class NoChessMod(loader.Module):
         self.games = {}
         self._frontend_html = None
         self._serveo_proc = None
+        self._game_slots = {}
 
     async def client_ready(self, client, db):
         self._client = client
@@ -378,10 +379,23 @@ class NoChessMod(loader.Module):
             if player_id and player_id not in (white_id, black_id):
                 await ws.close(code=4003)
                 return ws
+            color = None
             if player_id == white_id:
-                await ws.send_json({"type": "auth_ok", "color": "white"})
+                color = "white"
             elif player_id == black_id:
-                await ws.send_json({"type": "auth_ok", "color": "black"})
+                color = "black"
+            else:
+                slots = self._game_slots.setdefault(game_id, {"white": None, "black": None})
+                if slots["white"] is None or slots["white"] is ws:
+                    slots["white"] = ws
+                    color = "white"
+                elif slots["black"] is None or slots["black"] is ws:
+                    slots["black"] = ws
+                    color = "black"
+                else:
+                    await ws.close(code=4003)
+                    return ws
+            await ws.send_json({"type": "auth_ok", "color": color})
         except asyncio.TimeoutError:
             await ws.close(code=4003)
             return ws
@@ -457,6 +471,11 @@ class NoChessMod(loader.Module):
             pass
         finally:
             game["clients"].discard(ws)
+            slots = self._game_slots.get(game_id)
+            if slots:
+                for k in ("white", "black"):
+                    if slots[k] is ws:
+                        slots[k] = None
         return ws
 
     async def _start_serveo(self, port):
@@ -569,6 +588,7 @@ class NoChessMod(loader.Module):
     async def stop_callback(self, call: InlineCall):
         was_running = await self.stop_server()
         self.games.clear()
+        self._game_slots.clear()
         await call.answer(
             self.strings["stopped"] if was_running else self.strings["not_running"],
             show_alert=False,
@@ -692,4 +712,5 @@ class NoChessMod(loader.Module):
     async def ncstopcmd(self, message):
         was_running = await self.stop_server()
         self.games.clear()
+        self._game_slots.clear()
         await utils.answer(message, self.strings["stopped"] if was_running else self.strings["not_running"])
