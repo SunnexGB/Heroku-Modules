@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#1A1224">
 <title>NoChess</title>
 <style>
-@font-face{font-family:'NoChess';src:url('https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/mr_granstandercleang.otf') format('opentype')}
+@font-face{font-family:'NoChess';src:url('https://raw.githubusercontent.com/sepiol026-wq/Heroku-Modules/fuck/Assets/NoChess/mr_granstandercleang.otf') format('opentype')}
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{background:#1A1224;color:#eee;font-family:'NoChess',sans-serif;-webkit-font-smoothing:antialiased;height:100%}
 
@@ -20,7 +20,7 @@ html,body{background:#1A1224;color:#eee;font-family:'NoChess',sans-serif;-webkit
 .moves_list_mobile .move_current{background:rgba(255,223,90,0.12);border-radius:4px;padding:0 4px;margin:-1px -4px}
 
 .board-wrapper{display:flex;align-items:center;justify-content:center}
-.board-wrapper canvas{width:856px;height:856px;max-width:min(80vw,80vh - 80px);max-height:min(80vw,80vh - 80px);cursor:pointer}
+.board-wrapper canvas{width:856px;height:856px;max-width:min(80vw,80vh - 80px);max-height:min(80vw,80vh - 80px);cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 
 .main_board{background:rgba(0,0,0,0.33);border-radius:15px;padding:15px 10px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;width:260px;min-width:260px}
 
@@ -143,7 +143,7 @@ var DARK='#7699AF'
 var SEL='#FFDF5A'
 var MFROM='#58B4FF'
 var MTO='#87CEFA'
-var ASSET='https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess'
+var ASSET='https://raw.githubusercontent.com/sepiol026-wq/Heroku-Modules/fuck/Assets/NoChess'
 
 var PIECE_KEYS={wP:'white-pawn',wR:'white-rook',wN:'white-knight',wB:'white-bishop',wQ:'white-queen',wK:'white-king',bP:'black-pawn',bR:'black-rook',bN:'black-knight',bB:'black-bishop',bQ:'black-queen',bK:'black-king'}
 
@@ -168,7 +168,10 @@ var ctx=canvas.getContext('2d')
 canvas.width=BOARD_SIZE*BLOCK_SIZE
 canvas.height=BOARD_SIZE*BLOCK_SIZE
 
-var gameId=(new URLSearchParams(location.search)).get('game')
+var params=new URLSearchParams(location.search)
+var gameId=params.get('game')||params.get('startapp')||''
+var initData=''
+try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)initData=window.Telegram.WebApp.initData}catch(_){}
 var ws=null
 var reconnectTimer=null
 var game=null
@@ -253,17 +256,21 @@ ctx.fill()
 }
 }
 
-canvas.addEventListener('click',function(ev){
+function boardEvent(ev){
 if(!wsReady||!game||game.status==='finished'||pendingPromo)return
 var rect=canvas.getBoundingClientRect()
 var scaleX=canvas.width/rect.width
 var scaleY=canvas.height/rect.height
-var x=Math.floor((ev.clientX-rect.left)*scaleX/BLOCK_SIZE)
-var y=Math.floor((ev.clientY-rect.top)*scaleY/BLOCK_SIZE)
+var cx=ev.touches?ev.touches[0].clientX:ev.clientX
+var cy=ev.touches?ev.touches[0].clientY:ev.clientY
+var x=Math.floor((cx-rect.left)*scaleX/BLOCK_SIZE)
+var y=Math.floor((cy-rect.top)*scaleY/BLOCK_SIZE)
 var row=flipped?7-y:y
 var col=flipped?7-x:x
 handleClick(row,col)
-})
+}
+canvas.addEventListener('click',boardEvent)
+canvas.addEventListener('touchstart',function(ev){ev.preventDefault();boardEvent(ev)})
 
 function handleClick(row,col){
 var pieceAt=board&&board[row]?board[row][col]:null
@@ -365,6 +372,20 @@ ms.innerHTML='<span style="color:#666">Waiting for moves...</span>'
 
 function onMessage(ev){
 try{var data=JSON.parse(ev.data)}catch(_){return}
+if(data.type==='auth_ok'){
+if(!board)board=fenToBoard('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+if(data.color==='black'&&!flipped){var layout=document.getElementById('layout');flipped=true;layout.classList.add('board_flipped')}
+renderBoard()
+playSound('game_start')
+return
+}
+if(data.type==='illegal'){
+document.getElementById('overlay_msg').textContent='Illegal move'
+document.getElementById('overlay').style.display='flex'
+selected=null;legalMoves=[]
+renderBoard()
+return
+}
 if(data.type==='game_state'&&data.game){
 var prevGame=game
 game=data.game
@@ -404,11 +425,16 @@ var proto=location.protocol==='https:'?'wss:':'ws:'
 ws=new WebSocket(proto+'//'+location.host+'/ws/'+gameId)
 ws.onopen=function(){
 wsReady=true
-if(!board)board=fenToBoard('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
-renderBoard()
-playSound('game_start')
+ws.send(JSON.stringify({type:'auth',initData:initData,playerId:''}))
 }
-ws.onclose=function(){wsReady=false;clearTimeout(reconnectTimer);reconnectTimer=setTimeout(connect,2000)}
+ws.onclose=function(ev){
+wsReady=false;clearTimeout(reconnectTimer)
+if(ev.code===4003){
+document.getElementById('overlay_msg').textContent='Access denied'
+document.getElementById('overlay').style.display='flex'
+return
+}
+reconnectTimer=setTimeout(connect,2000)}
 ws.onmessage=onMessage
 ws.onerror=function(){ws.close()}
 }

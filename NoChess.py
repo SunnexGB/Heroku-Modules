@@ -4,6 +4,8 @@
 # current ver
 __version__ = (2, 0, 0)
 
+botfather_photo_url = "https://r2.fakecrime.bio/uploads/d3e16245-15a2-43f1-b176-493b4d9f1f21.jpg"
+
 import asyncio
 import chess
 import html
@@ -22,7 +24,7 @@ from ..inline.types import InlineCall
 
 logger = logging.getLogger(__name__)
 
-FRONTEND_URL = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess/frontend/index.html"
+FRONTEND_URL = "https://raw.githubusercontent.com/sepiol026-wq/Heroku-Modules/fuck/Assets/NoChess/frontend/index.html"
 
 strings = {
     "name": "NoChess",
@@ -288,7 +290,8 @@ class NoChessMod(loader.Module):
     async def start_server(self, port):
         app = web.Application()
         app.router.add_get("/", self.handle_home)
-        app.router.add_get("/ws", self.handle_ws)
+        app.router.add_get("/ws/{game_id}", self.handle_ws)
+        app.router.add_get("/api/game/{game_id}/legal", self.handle_legal)
         self.runner = web.AppRunner(app)
         await self.runner.setup()
         await web.TCPSite(self.runner, "127.0.0.1", port).start()
@@ -296,8 +299,7 @@ class NoChessMod(loader.Module):
 
     async def handle_home(self, request):
         if self._frontend_html is None:
-            timeout = ClientSession(total=None)
-            async with ClientSession(timeout=timeout) as sess:
+            async with ClientSession() as sess:
                 async with sess.get(FRONTEND_URL) as resp:
                     if resp.status == 200:
                         self._frontend_html = await resp.text()
@@ -305,27 +307,88 @@ class NoChessMod(loader.Module):
                         return web.Response(status=500, text="Failed to load frontend")
         return web.Response(body=self._frontend_html, content_type="text/html")
 
+    def _make_game_state(self, game):
+        board = game["board"]
+        fen = board.fen()
+        turn = "w" if board.turn else "b"
+        moves = []
+        for m in board.move_stack:
+            moves.append(m.uci())
+        in_check = board.is_check()
+        return {
+            "fen": fen,
+            "turn": turn,
+            "status": game.get("status", "playing"),
+            "result": game.get("result"),
+            "reason": game.get("reason"),
+            "moves": moves,
+            "white": game.get("white", ""),
+            "black": game.get("black", ""),
+            "in_check": in_check,
+        }
+
+    async def handle_legal(self, request):
+        game_id = request.match_info["game_id"]
+        square = request.query.get("square", "")
+        game = self.games.get(game_id)
+        if not game:
+            return web.json_response({"moves": []}, status=404)
+        legal = [m.uci() for m in game["board"].legal_moves]
+        if square:
+            legal = [m for m in legal if m.startswith(square)]
+        return web.json_response({"moves": legal})
+
     async def handle_ws(self, request):
         ws = web.WebSocketResponse()
         await ws.prepare(request)
-        game_id = request.query.get("game", "")
+        game_id = request.match_info["game_id"]
         game = self.games.get(game_id)
         if not game:
             await ws.send_json({"type": "error", "message": "Game not found"})
             await ws.close()
             return ws
+        try:
+            auth_msg = await asyncio.wait_for(ws.receive(), timeout=10)
+            if auth_msg.type != WSMsgType.TEXT:
+                await ws.close(code=4003)
+                return ws
+            try:
+                auth_data = json.loads(auth_msg.data)
+            except json.JSONDecodeError:
+                await ws.close(code=4003)
+                return ws
+            if auth_data.get("type") != "auth":
+                await ws.close(code=4003)
+                return ws
+            init_data = auth_data.get("initData", "")
+            player_id = None
+            if init_data:
+                from urllib.parse import parse_qs
+                parsed = parse_qs(init_data)
+                user_json = parsed.get("user", ["{}"])[0]
+                try:
+                    user = json.loads(user_json)
+                    player_id = str(user.get("id", ""))
+                except Exception:
+                    pass
+            if not player_id:
+                player_id = auth_data.get("playerId", "")
+            white_id = str(game.get("white_id", ""))
+            black_id = str(game.get("black_id", ""))
+            if player_id and player_id not in (white_id, black_id):
+                await ws.close(code=4003)
+                return ws
+            if player_id == white_id:
+                await ws.send_json({"type": "auth_ok", "color": "white"})
+            elif player_id == black_id:
+                await ws.send_json({"type": "auth_ok", "color": "black"})
+        except asyncio.TimeoutError:
+            await ws.close(code=4003)
+            return ws
         game["clients"].add(ws)
         try:
-            await ws.send_json({
-                "type": "init",
-                "fen": game["board"].fen(),
-                "turn": "white" if game["board"].turn else "black",
-                "status": game.get("status", "playing"),
-                "result": game.get("result"),
-                "reason": game.get("reason"),
-                "white": game.get("white", ""),
-                "black": game.get("black", ""),
-            })
+            gs = self._make_game_state(game)
+            await ws.send_json({"type": "game_state", "game": gs})
             async for msg in ws:
                 if msg.type == WSMsgType.TEXT:
                     try:
@@ -346,12 +409,12 @@ class NoChessMod(loader.Module):
                             outcome = board.outcome()
                             if outcome:
                                 if outcome.winner is not None:
-                                    game["status"] = "game_over"
-                                    game["result"] = "white" if outcome.winner else "black"
+                                    game["status"] = "finished"
+                                    game["result"] = "1-0" if outcome.winner else "0-1"
                                     game["reason"] = "checkmate"
                                 else:
-                                    game["status"] = "game_over"
-                                    game["result"] = "draw"
+                                    game["status"] = "finished"
+                                    game["result"] = "1/2-1/2"
                                     game["reason"] = "stalemate" if board.is_stalemate() else (
                                         "insufficient" if board.is_insufficient_material() else (
                                             "fifty_moves" if board.is_fifty_moves() else (
@@ -359,49 +422,33 @@ class NoChessMod(loader.Module):
                                             )
                                         )
                                     )
-                            elif board.is_check():
-                                game["check"] = "white" if board.turn else "black"
-                            broadcast_msg = {
-                                "type": "update",
-                                "fen": board.fen(),
-                                "turn": "white" if board.turn else "black",
-                                "status": game["status"],
-                                "result": game.get("result"),
-                                "reason": game.get("reason"),
-                                "last_move": data["uci"],
-                            }
-                            if game.get("check"):
-                                broadcast_msg["check"] = game["check"]
-                                del game["check"]
+                            gs = self._make_game_state(game)
+                            broadcast_msg = {"type": "game_state", "game": gs}
+                            if game["status"] == "finished":
+                                broadcast_msg = {"type": "game_over", "result": game["result"], "reason": game.get("reason", "")}
                         except Exception:
                             await ws.send_json({"type": "illegal", "uci": data.get("uci", "")})
                             continue
                     elif data.get("type") == "resign":
-                        game["status"] = "game_over"
-                        game["result"] = "black" if game["board"].turn else "white"
+                        game["status"] = "finished"
+                        game["result"] = "0-1" if game["board"].turn else "1-0"
                         game["reason"] = "resign"
-                        broadcast_msg = {
-                            "type": "game_over",
-                            "result": game["result"],
-                            "reason": "resign",
-                        }
-                    elif data.get("type") == "draw_offer":
-                        broadcast_msg = {"type": "draw_offered"}
-                    elif data.get("type") == "draw_accept":
-                        game["status"] = "game_over"
-                        game["result"] = "draw"
+                        broadcast_msg = {"type": "game_over", "result": game["result"], "reason": "resign"}
+                    elif data.get("type") == "draw":
+                        game["status"] = "finished"
+                        game["result"] = "1/2-1/2"
                         game["reason"] = "agreement"
-                        broadcast_msg = {
-                            "type": "game_over",
-                            "result": "draw",
-                            "reason": "agreement",
-                        }
+                        broadcast_msg = {"type": "game_over", "result": game["result"], "reason": "agreement"}
                     else:
                         continue
+                    gs2 = self._make_game_state(game)
                     for client in list(game["clients"]):
-                        if client is not ws and not client.closed:
+                        if not client.closed:
                             try:
-                                await client.send_json(broadcast_msg)
+                                if client is ws:
+                                    await client.send_json({"type": "game_state", "game": gs2})
+                                else:
+                                    await client.send_json(broadcast_msg)
                             except Exception:
                                 pass
                 elif msg.type == WSMsgType.ERROR:
@@ -461,6 +508,53 @@ class NoChessMod(loader.Module):
             buf_str = self._strip_ansi(buf.decode(errors="replace"))
             raise RuntimeError(f"No serveo URL received: {buf_str}")
         return url
+
+    async def _auto_cma(self):
+        try:
+            from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl
+            bot_username = (await self.inline.bot.get_me()).username
+            bot_username = (bot_username or "").strip().lstrip("@")
+            if not bot_username:
+                return None
+            web_url = (self.tunnel_url or "").strip()
+            if not web_url or "t.me/" in web_url:
+                return None
+            token = self.access_token
+            parsed = urlsplit(web_url)
+            query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+            query["token"] = token
+            web_url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment))
+            await self._client.send_message("@BotFather", "/cancel")
+            await asyncio.sleep(0.9)
+            async with self._client.conversation("@BotFather", timeout=120) as conv:
+                await conv.send_message("/newapp")
+                await conv.get_response()
+                await asyncio.sleep(0.8)
+                await conv.send_message(f"@{bot_username}")
+                await conv.get_response()
+                await asyncio.sleep(0.8)
+                await conv.send_message("NoChessModule")
+                await conv.get_response()
+                await asyncio.sleep(0.8)
+                await conv.send_message("NoChess")
+                await conv.get_response()
+                await asyncio.sleep(0.8)
+                await conv.send_file(botfather_photo_url)
+                await conv.get_response()
+                await asyncio.sleep(0.8)
+                await conv.send_message("/empty")
+                await conv.get_response()
+                await asyncio.sleep(0.8)
+                await conv.send_message(web_url)
+                await conv.get_response()
+                await asyncio.sleep(0.8)
+                await conv.send_message("NoChess")
+                await conv.get_response()
+            direct_link = f"https://t.me/{bot_username}/NoChess"
+            self.config["mini_app_url"] = direct_link
+            return direct_link
+        except Exception:
+            return None
 
     async def send_form(self, message, url):
         await self.inline.form(
@@ -558,8 +652,13 @@ class NoChessMod(loader.Module):
         elif message.is_reply:
             await utils.answer(message, self.strings["already_running"])
 
+        mini_url = (self.config["mini_app_url"] or "").strip()
+        if not mini_url:
+            await self._auto_cma()
+
         game_id = self._new_game_id()
         board = chess.Board()
+        my_id = str(getattr(self._me, "id", ""))
         self.games[game_id] = {
             "board": board,
             "status": "playing",
@@ -568,10 +667,16 @@ class NoChessMod(loader.Module):
             "clients": set(),
             "white": my_name,
             "black": opponent_name,
+            "white_id": my_id,
+            "black_id": str(opponent),
             "created_at": int(time.time()),
         }
 
-        game_url = f"{self.tunnel_url}/?game={game_id}"
+        mini_url = (self.config["mini_app_url"] or "").strip().rstrip("/")
+        if mini_url.startswith("https://t.me/"):
+            game_url = f"{mini_url}?startapp={game_id}"
+        else:
+            game_url = f"{self.tunnel_url}/?game={game_id}"
         await self.send_form(message, game_url)
 
     @loader.command(
