@@ -240,7 +240,7 @@ class NoChessMod(loader.Module):
         self.access_token = None
         self.games = {}
         self._frontend_html = None
-        self._serveo_proc = None
+        self._tunnel_proc = None
         self._game_slots = {}
 
     async def client_ready(self, client, db):
@@ -259,8 +259,8 @@ class NoChessMod(loader.Module):
     def _strip_ansi(text):
         return re.sub(r'\x1b\[[0-9;]*m', '', text)
 
-    async def _kill_serveo(self):
-        proc = self._serveo_proc
+    async def _kill_tunnel(self):
+        proc = self._tunnel_proc
         if proc is None:
             return
         try:
@@ -273,10 +273,10 @@ class NoChessMod(loader.Module):
             await asyncio.wait_for(proc.wait(), timeout=3)
         except (asyncio.TimeoutError, Exception):
             pass
-        self._serveo_proc = None
+        self._tunnel_proc = None
 
     async def stop_server(self):
-        await self._kill_serveo()
+        await self._kill_tunnel()
         was_running = self.runner is not None
         if self.runner:
             try:
@@ -479,8 +479,67 @@ class NoChessMod(loader.Module):
                         slots[k] = None
         return ws
 
-    async def _start_serveo(self, port):
-        await self._kill_serveo()
+    async def _start_tunnel(self, port):
+        await self._kill_tunnel()
+        cf_bin = self._find_cloudflared()
+        if cf_bin:
+            return await self._start_cloudflared(cf_bin, port)
+        return await self._start_serveo_fallback(port)
+
+    def _find_cloudflared(self):
+        import os as _os
+        from pathlib import Path
+        paths = [
+            "/usr/local/bin/cloudflared",
+            "/usr/bin/cloudflared",
+        ]
+        try:
+            mod_dir = str(Path(__spec__.origin).parent) if __spec__ and __spec__.origin else str(Path().resolve())
+            paths.insert(0, _os.path.join(mod_dir, "cloudflared"))
+        except Exception:
+            pass
+        for p in paths:
+            if _os.path.isfile(p) and _os.access(p, _os.X_OK):
+                return p
+        return None
+
+    async def _start_cloudflared(self, cf_bin, port):
+        cmd = [cf_bin, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{port}"]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        self._tunnel_proc = proc
+        url = None
+        deadline = asyncio.get_event_loop().time() + 30
+        buf = b""
+        while asyncio.get_event_loop().time() < deadline:
+            try:
+                line = await asyncio.wait_for(proc.stdout.readline(), timeout=1.0)
+            except asyncio.TimeoutError:
+                if proc.returncode is not None:
+                    buf_str = buf.decode(errors="replace")
+                    raise RuntimeError(f"cloudflared exited {proc.returncode}: {buf_str}")
+                continue
+            if not line:
+                if proc.returncode is not None:
+                    buf_str = buf.decode(errors="replace")
+                    raise RuntimeError(f"cloudflared exited {proc.returncode}: {buf_str}")
+                await asyncio.sleep(0.5)
+                continue
+            buf += line
+            line_str = line.decode(errors="replace")
+            match = re.search(r'https://[\w.-]+\.trycloudflare\.com', line_str)
+            if match:
+                url = match.group(0).rstrip("/")
+                break
+        if not url:
+            buf_str = buf.decode(errors="replace")
+            raise RuntimeError(f"No cloudflared URL received: {buf_str}")
+        return url
+
+    async def _start_serveo_fallback(self, port):
         subdomain = (self.config["serveo_subdomain"] or "").strip()
         if subdomain:
             remote = f"{subdomain}:80:localhost:{port}"
@@ -500,7 +559,7 @@ class NoChessMod(loader.Module):
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
         )
-        self._serveo_proc = proc
+        self._tunnel_proc = proc
         url = None
         deadline = asyncio.get_event_loop().time() + 20
         buf = b""
@@ -528,7 +587,6 @@ class NoChessMod(loader.Module):
             buf_str = self._strip_ansi(buf.decode(errors="replace"))
             raise RuntimeError(f"No serveo URL received: {buf_str}")
         return url
-
     async def _auto_cma(self):
         try:
             bot_username = (await self.inline.bot.get_me()).username
@@ -678,7 +736,7 @@ class NoChessMod(loader.Module):
             sock.close()
             await self.start_server(port)
             try:
-                self.tunnel_url = await self._start_serveo(port)
+                self.tunnel_url = await self._start_tunnel(port)
             except Exception as error:
                 await self.stop_server()
                 return await utils.answer(
