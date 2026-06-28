@@ -11,8 +11,8 @@ import aiohttp
 import math
  
 FHETA_URL = "https://api.fixyres.com/grates"
-VECTOR_URL = "https://vector-three-sooty.vercel.app/api/devstats"
-VECTOR_TOPMOD_URL = "https://vector-three-sooty.vercel.app/api/usertopmod?users="
+VECTOR_URL = "https:www.0xvector.lol/api/devstats"
+VECTOR_TOPMOD_URL = "https:www.0xvector.lol/api/usertopmod?users="
 
 @loader.tds
 class DevStats(loader.Module):
@@ -319,5 +319,4 @@ class DevStats(loader.Module):
  
         async def on_back(call: InlineCall):
             await call.edit(render(), reply_markup=markup())
- 
         await utils.answer(message, render(), reply_markup=markup())
