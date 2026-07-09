@@ -1,4 +1,4 @@
-# meta developer: @SunnexGB
+# meta developer: @H_SunMods
 # requires: aiohttp
 # meta pic: https://r2.fakecrime.bio/uploads/6725e5a0-0c9e-48ed-be85-dfd857c2aa5f.jpg
 # meta banner: https://r2.fakecrime.bio/uploads/6725e5a0-0c9e-48ed-be85-dfd857c2aa5f.jpg

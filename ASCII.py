@@ -1,5 +1,5 @@
 # requires: Pillow numpy
-# meta developer: @SunnexGB
+# meta developer: @H_SunMods
 # meta banner: https://i.pinimg.com/control1/1200x/24/8d/40/248d40b6afa5bd3c3764556b50635691.jpg
 __version__ = (1, 0, 0)
 
