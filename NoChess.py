@@ -1,320 +1,683 @@
-# requires: aiohttp pyngrok
+# requires: aiohttp python-chess
 # meta developer: @H_SunMods
 # meta banner: https://r2.fakecrime.bio/uploads/965a3206-4609-4dff-beb0-6831f8b90e12.jpg
 # current ver
-__version__ = (0, 1, 0)
+__version__ = (2, 0, 0)
 
-import json
-import socket
+botfather_photo_url = "https://r2.fakecrime.bio/uploads/d3e16245-15a2-43f1-b176-493b4d9f1f21.jpg"
+
 import asyncio
-import secrets
+import chess
+import html
+import json
 import logging
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
-from aiohttp import ClientSession, ClientTimeout, web
-from herokutl.types import Message
-from pyngrok import conf, ngrok
+import os
+import re
+import secrets
+import socket
+import subprocess
+import time
+from aiohttp import web, WSMsgType, ClientSession
+
 from .. import loader, utils
 from ..inline.types import InlineCall
 
-logging.getLogger("pyngrok").setLevel(logging.WARNING)
-logging.getLogger("pyngrok.process").setLevel(logging.WARNING)
-logging.getLogger("pyngrok.process.ngrok").setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
-html_raw = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/Assets/NoChess/raw_assets/index.html"
-css_raw = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/Assets/NoChess/raw_assets/style.css"
-js_raw = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/Assets/NoChess/raw_assets/javascript.js"
-asset_root_raw = "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/main/Assets/NoChess"
-botfather_photo_url = "https://r2.fakecrime.bio/uploads/d3e16245-15a2-43f1-b176-493b4d9f1f21.jpg"
+FRONTEND_URL = "https://raw.githubusercontent.com/sepiol026-wq/Heroku-Modules/fuck/Assets/NoChess/frontend/index.html"
+
+strings = {
+    "name": "NoChess",
+    "_cls_doc": "Chess web module. Play real-time chess via browser.",
+    "_cmd_doc_nochess": "[user] — create a chess game via browser",
+    "_cmd_doc_ncstop": "— stop NoChess server",
+    "no_opponent": "Error: reply to a user or provide @username to challenge.",
+    "online": "Game is live!",
+    "starting": "Starting server...",
+    "already_running": "Server already running.",
+    "stopped": "Server stopped.",
+    "not_running": "Server is not running.",
+    "tunnel_error": "Serveo tunnel error: <code>{}</code>",
+    "open_button": "Open mini-app",
+    "stop_button": "Stop",
+    "about_text": "<b>NoChess v2.0.0</b>\nFully playable chess — create a game, share the link, play real-time.\nUses python-chess engine, no external Chess module needed.\nSupports checkmate, stalemate, draw by agreement, resignation, threefold repetition, 50-move rule, insufficient material.\nCommands: <code>.nochess @user</code> to challenge.",
+    "server_starting": "<code>NoChess server starting...</code>",
+    "RuntimeError": "inline bot username not found",
+    "not_supported_platform": "(T_T) Unfortunately, it is impossible to install this module on this platform.\n\n(~)~ This is not an error, please do not contact support."
+}
+
+strings_ru = {
+    "name": "NoChess",
+    "_cls_doc": "Шахматный веб-модуль. Играй в шахматы в реальном времени через браузер.",
+    "_cmd_doc_nochess": "[юзер] — создать шахматную партию через браузер",
+    "_cmd_doc_ncstop": "— остановить сервер NoChess",
+    "no_opponent": "Ошибка: укажи юзера через реплай или @username.",
+    "online": "Партия запущена!",
+    "starting": "Запуск сервера...",
+    "already_running": "Сервер уже запущен.",
+    "stopped": "Сервер остановлен.",
+    "not_running": "Сервер не запущен.",
+    "tunnel_error": "Ошибка туннеля Serveo: <code>{}</code>",
+    "open_button": "Открыть мини-приложение",
+    "stop_button": "Остановить",
+    "about_text": "<b>NoChess v2.0.0</b>\nПолноценные шахматы — создай партию, отправь ссылку, играй в реальном времени.\nДвижок python-chess, без внешнего модуля Chess.\nПоддержка мата, пата, ничьей по соглашению, сдачи, троекратного повторения, правила 50 ходов, недостаточного материала.\nКоманды: <code>.nochess @user</code> вызвать на партию.",
+    "server_starting": "<code>NoChess сервер запускается...</code>",
+    "RuntimeError": "inline bot username not found",
+    "not_supported_platform": "(T_T) К сожалению, установка этого модуля на данной платформе невозможна.\n\n(~)~ Это не ошибка, пожалуйста не обращайтесь в поддержку."
+}
+
+strings_ua = {
+    "name": "NoChess",
+    "_cls_doc": "Шаховий веб-модуль. Грай у шахи в реальному часі через браузер.",
+    "_cmd_doc_nochess": "[юзер] — створити шахову партію через браузер",
+    "_cmd_doc_ncstop": "— зупинити сервер NoChess",
+    "no_opponent": "Помилка: вкажи юзера через реплай або @username.",
+    "online": "Партія запущена!",
+    "starting": "Запуск сервера...",
+    "already_running": "Сервер вже запущено.",
+    "stopped": "Сервер зупинено.",
+    "not_running": "Сервер не запущено.",
+    "tunnel_error": "Помилка тунелю Serveo: <code>{}</code>",
+    "open_button": "Відкрити міні-застосунок",
+    "stop_button": "Зупинити",
+    "about_text": "<b>NoChess v2.0.0</b>\nПовноцінні шахи — створи партію, надішли посилання, грай в реальному часі.\nДвигун python-chess, без зовнішнього модуля Chess.\nПідтримка мату, пату, нічиєї за згодою, здачі, триразового повторення, правила 50 ходів, недостатнього матеріалу.\nКоманди: <code>.nochess @user</code> викликати на партію.",
+    "server_starting": "<code>NoChess сервер запускається...</code>",
+    "RuntimeError": "inline bot username not found",
+    "not_supported_platform": "(T_T) На жаль, встановлення цього модуля на цій платформі неможливе.\n\n(~)~ Це не помилка, будь ласка не звертайтесь у підтримку."
+}
+
+strings_de = {
+    "name": "NoChess",
+    "_cls_doc": "Schach-Webmodul. Echtzeit-Schach im Browser.",
+    "_cmd_doc_nochess": "[user] — Schachpartie im Browser starten",
+    "_cmd_doc_ncstop": "— NoChess-Server stoppen",
+    "no_opponent": "Fehler: Nutzer per Reply oder @username angeben.",
+    "online": "Partie lauft!",
+    "starting": "Server startet...",
+    "already_running": "Server lauft bereits.",
+    "stopped": "Server gestoppt.",
+    "not_running": "Server lauft nicht.",
+    "tunnel_error": "Serveo-Tunnel-Fehler: <code>{}</code>",
+    "open_button": "Mini-App offnen",
+    "stop_button": "Stopp",
+    "about_text": "<b>NoChess v2.0.0</b>\nVollwertiges Schach — Partie erstellen, Link teilen, in Echtzeit spielen.\npython-chess Engine, kein externes Chess-Modul notig.\nUnterstutzt Schachmatt, Patt, Remis durch Vereinbarung, Aufgabe, dreifache Stellungswiederholung, 50-Zuge-Regel, unzureichendes Material.\nBefehle: <code>.nochess @user</code> herausfordern.",
+    "server_starting": "<code>NoChess Server startet...</code>",
+    "RuntimeError": "Inline-Bot-Benutzername nicht gefunden",
+    "not_supported_platform": "(T_T) Leider ist die Installation dieses Moduls auf dieser Plattform nicht moglich.\n\n(~)~ Dies ist kein Fehler, bitte kontaktiere nicht den Support."
+}
+
+strings_jp = {
+    "name": "NoChess",
+    "_cls_doc": "チェスウェブモジュール。ブラウザでリアルタイムチェス。",
+    "_cmd_doc_nochess": "[ユーザー] — ブラウザでチェスの対局を作成",
+    "_cmd_doc_ncstop": "— NoChessサーバーを停止",
+    "no_opponent": "エラー: リプライまたは@usernameで相手を指定。",
+    "online": "対局開始!",
+    "starting": "サーバー起動中...",
+    "already_running": "サーバーは既に起動中。",
+    "stopped": "サーバー停止。",
+    "not_running": "サーバーは起動していません。",
+    "tunnel_error": "Serveoトンネルエラー: <code>{}</code>",
+    "open_button": "ミニアプリを開く",
+    "stop_button": "停止",
+    "about_text": "<b>NoChess v2.0.0</b>\nブラウザで対局を作成し、リンクを共有してリアルタイムプレイ。\npython-chessエンジン、外部Chessモジュール不要。\nチェックメイト、ステイルメイト、合意によるドロー、リザイン、3回反復、50手ルール、不十分な駒に対応。\nコマンド: <code>.nochess @user</code> で対局を申し込む。",
+    "server_starting": "<code>NoChessサーバー起動中...</code>",
+    "RuntimeError": "inline bot username not found",
+    "not_supported_platform": "(T_T) 残念ながら、このプラットフォームではこのモジュールをインストールできません。\n\n(~)~ これはエラーではありません、サポートに連絡しないでください。"
+}
+
+strings_leet = {
+    "name": "NoChess",
+    "_cls_doc": "ch3ss w3b m0dul3. r34l-t1m3 ch3ss 1n br0ws3r.",
+    "_cmd_doc_nochess": "[us3r] — cr34t3 ch3ss g4m3 v14 br0ws3r",
+    "_cmd_doc_ncstop": "— st0p N0Ch3ss s3rv3r",
+    "no_opponent": "3rr0r: r3ply 0r @us3rn4m3 t0 ch4ll3ng3.",
+    "online": "G4m3 1s l1v3!",
+    "starting": "S3rv3r b00t1ng...",
+    "already_running": "S3rv3r 4lr34dy up.",
+    "stopped": "S3rv3r k1ll3d.",
+    "not_running": "S3rv3r n0t up.",
+    "tunnel_error": "S3rv30 tunn3l f41l: <code>{}</code>",
+    "open_button": "0p3n m1n1-4pp",
+    "stop_button": "K1ll",
+    "about_text": "<b>N0Ch3ss v2.0.0</b>\nFull ch3ss — cr34t3 g4m3, sh4r3 l1nk, pl4y r34l-t1m3.\npyth0n-ch3ss 3ng1n3, n0 3xt3rn4l Ch3ss m0dul3.\nSupp0rts ch3ckm4t3, st4l3m4t3, dr4w, r3s1gn, 3x r3p3t1t10n, 50-m0v3, 1nsuff m4t3r14l.\nC0mm4nds: <code>.n0ch3ss @us3r</code> t0 ch4ll3ng3.",
+    "server_starting": "<code>N0Ch3ss s3rv3r b00t1ng...</code>",
+    "RuntimeError": "1nl1n3 b0t h4ndl3 n0t f0und",
+    "not_supported_platform": "(T_T) N0 sh0t th1s m0dul3 w0rks 0n th1s pl4tf0rm.\n\n(~)~ N0t 4 bug, d0n't h1t up supp0rt."
+}
+
+strings_neofit = {
+    "name": "NoChess",
+    "_cls_doc": "chess ting for the mandem. real-time chess in browser.",
+    "_cmd_doc_nochess": "[user] — link up a chess game in the browser innit",
+    "_cmd_doc_ncstop": "— shut down NoChess server",
+    "no_opponent": "Bruv: reply or @username to run up on someone.",
+    "online": "Game is live!",
+    "starting": "Server booting...",
+    "already_running": "Server already running.",
+    "stopped": "Server shut down.",
+    "not_running": "Server not running.",
+    "tunnel_error": "Serveo tunnel bricked: <code>{}</code>",
+    "open_button": "Pop the mini-app",
+    "stop_button": "Cut it",
+    "about_text": "<b>NoChess v2.0.0</b>\nFull chess — create a game, share the link, play real-time.\npython-chess engine, no external Chess module.\nSupports checkmate, stalemate, draw, resign, 3x repetition, 50-move, insufficient material.\nCommands: <code>.nochess @user</code> to challenge.",
+    "server_starting": "<code>NoChess server booting...</code>",
+    "RuntimeError": "inline bot handle MIA",
+    "not_supported_platform": "(T_T) No shot this module works on this platform.\n\n(~)~ Not a bug, don't hit up support."
+}
+
+strings_tiktok = {
+    "name": "NoChess",
+    "_cls_doc": "Шахматный веб-модуль. Играй в шахматы в реальном времени через браузер.",
+    "_cmd_doc_nochess": "[юзер] — Замутить шахматную партию в браузере",
+    "_cmd_doc_ncstop": "— Вырубает NoChess сервер",
+    "no_opponent": "Ошибка: укажи юзера через реплай или @username, бро.",
+    "online": "Партия замутилась!",
+    "starting": "Сервер мутится...",
+    "already_running": "Сервер уже работает, не тупи.",
+    "stopped": "Сервер вырублен.",
+    "not_running": "Сервер не запущен.",
+    "tunnel_error": "Serveo тунель крашнулся: <code>{}</code>",
+    "open_button": "Открыть мини-апп",
+    "stop_button": "Стопэ",
+    "about_text": "<b>NoChess v2.0.0</b>\nПолноценные шахматы — мутишь партию, кидаешь ссылку, играешь в реалтайме.\nДвижок python-chess, без внешнего модуля Chess.\nПоддержка мата, пата, ничьи, сдачи, 3х повтора, 50 ходов, недостаточного материала.\nКоманды: <code>.nochess @user</code> кинуть вызов.",
+    "server_starting": "<code>NoChess сервер мутится...</code>",
+    "RuntimeError": "inline bot username not found",
+    "not_supported_platform": "(T_T) К сожалению, установка этого модуля на данной платформе невозможна.\n\n(~)~ Это не ошибка, пожалуйста не обращайтесь в поддержку."
+}
+
+strings_uwu = {
+    "name": "NoChess",
+    "_cls_doc": "chess web moduwe. pway weaw-time chess in bwowsew~",
+    "_cmd_doc_nochess": "[usew] — cweate a chess game in da bwowsew~",
+    "_cmd_doc_ncstop": "— stop da NoChess sewvew~",
+    "no_opponent": "oopsie: wepwy or @usewname to chawwenge pwease~",
+    "online": "Game is wive!",
+    "starting": "Sewvew booting...",
+    "already_running": "Sewvew awweady wunning~",
+    "stopped": "Sewvew stopped~",
+    "not_running": "Sewvew not wunning~",
+    "tunnel_error": "Sewveo tunnew-bun oopsie: <code>{}</code>",
+    "open_button": "Open minyi-app~",
+    "stop_button": "Stahp pwease",
+    "about_text": "<b>NoChess v2.0.0</b>\nFuww chess — cweate game, shawe wink, pway weaw-time.\npython-chess engine, no extewnaw Chess moduwe.\nSuppowts checkmate, stalemate, dwaw, wesign, 3x wepetition, 50-move, insufficient matewiaw.\nCommands: <code>.nochess @usew</code> to chawwenge~",
+    "server_starting": "<code>NoChess sewvew booting...</code>",
+    "RuntimeError": "inwine bot usewname not found",
+    "not_supported_platform": "(T_T) Unfowtunatewy, instawwation of dis moduwe on dis pwatfowm is impossibwe.\n\n(~)~ Dis is not an ewwow, pwease do not contact suppowt."
+}
+
 
 @loader.tds
-class NoChess(loader.Module):
-    """NoChess - web module that allows u to launch a web page either as a functional HTML page or as a Telegram Mini-App. This is an add-on for Chess module by @nullmod"""
+class NoChessMod(loader.Module):
+    strings = strings
 
-    # я пытался кароче сделать тут перевод делая реплейсы в зависимости от стрингов,но это не работает,поэтому да
-    strings = {
-        "name": "NoChess",
-        "starting": "( ﾉ･ｪ･ )ﾉ <b>Starting NoChess...</b>",
-        "online": "(*˘︶˘*) <b>NoChess is running</b>",
-        "already_running": "ʕᵕᴥᵕʔ <b>NoChess is already running</b>",
-        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess stopped",
-        "not_running": "(✿╹◡╹) NoChess is not running",
-        "ngrok_missing": "Set a <code>ngrok_token</code>",
-        "ngrok_error": "Ngrok start error: <code>{}</code>",
-        "asset_read_error": "Failed to load web assets: <code>{}</code>",
-        "open_button": "Open mini-app",
-        "stop_button": "Stop",
-        "about_text": "<b>Important read:</b>\nSometimes the server won't lift cause there's enough processes running, for example on HikkaHost, for this I just rebooted the server\nNext is that <code>cma</code> setups the app by a template and it's rly crooked, so you'll have to set some web app config settings yourself\nAnd also:\n    1. First launch will start straight with a site link, not as a web app\n    2. Use <code>nochess</code>, and then <code>cma</code> to setup the web app\n    3. After that restart the process by typing <code>nochess -kill</code> and <code>nochess</code> again\nYeah it's hacky as hell, but I was so over doing stuff that I started dumping some routine like working with files on ai, which I didn't like so I decided to quick-release the module before it's too late\nWell and maybe soon I'll make an update, right now it's some pre-alpha version, that's why the version name is like this, later I'll change it to 1.0.0, if people actually dig the module as an idea",
-        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>Creating mini app in BotFather...</b>",
-        "cma_need_url": "Set mini app web URL first or run <code>.nochess</code> to get it.",
-        "cma_done": "(*˘︶˘*) <b>Done.</b>",
-        "cma_error": "Error: <code>{}</code>",
-        "RuntimeError": "inline bot username not found",
-        "not_supported_platform": "(┬┬＿┬┬) Unfortunately, it is impossible to install this module on this platform.\n\n(〜^∇^)〜 This is not an error, please do not contact support."
-    }
+    strings_ru = strings_ru
+    strings_ua = strings_ua
+    strings_de = strings_de
+    strings_jp = strings_jp
+    strings_leet = strings_leet
+    strings_neofit = strings_neofit
+    strings_tiktok = strings_tiktok
+    strings_uwu = strings_uwu
 
-    strings_ru = {
-        "_cls_doc": "NoChess - Веб модуль который позволяет запускать веб-пейдж,как HTML страницу с функционалом,так же в виде Telegram Mini-App. Является дополнением к модулю Chess от @nullmod",
-        "starting": "( ﾉ･ｪ･ )ﾉ <b>Запуск NoChess...</b>",
-        "online": "(*˘︶˘*) <b>NoChess запущен</b>",
-        "already_running": "ʕᵕᴥᵕʔ <b>NoChess уже запущен</b>",
-        "stopped": "･ﾟ･(｡>д<｡)･ﾟ･ NoChess остановлен",
-        "not_running": "(✿╹◡╹) NoChess не запущен",
-        "ngrok_missing": "Укажи <code>ngrok_token</code>",
-        "ngrok_error": "Ошибка запуска ngrok: <code>{}</code>",
-        "asset_read_error": "Не удалось загрузить веб-ассеты: <code>{}</code>",
-        "open_button": "Открыть мини-приложение",
-        "stop_button": "Остановить",
-        "about_text": "<b>Важно к прочтению:</b>\nИногда сервер не может подниматься из за того что запущено достаточно процессов, например на HikkaHost,для этого я просто перезагружал сервер.\nДалее это то что <code>cma</code> сетапает приложение по шаблону и оч криво, поэтому вам придется выставлять некоторые настройки конфигурации веб приложения самим.\nА еще:\n    1. Первый запуск будет запускаться сразу ссылкой на сайт, а не как веб приложение.\n    2. Используйте <code>nochess</code>, а потом <code>cma</code> чтобы настроить веб приложение.\n    3. После чего перезапустите процесс написав <code>nochess -kill</code> и повторно <code>nochess</code>.\nДа это костыли, но мне уже настолько было в падлу что то делать что я уже стал спихивать рутину по типу работы с файлами на ии, что мне не понравилось и я решил быстро релизать модуль пока не стало поздно.\nНу и может быть в скором времени я уже сделаю апдейт, на данный момент это какая то пре-альфа версия, поэтому и название версии такое, в дальнейшем изменю на 1.0.0, если модуль вообще понравиться людям как идея.",
-        "cma_start": "( ﾉ･ｪ･ )ﾉ <b>Создаю эпку через BotFather...</b>",
-        "cma_need_url": "Сначала укажи URL мини-эпки или запусти <code>.nochess</code>, чтобы получить его",
-        "cma_done": "(*˘︶˘*) <b>Готово</b>",
-        "cma_error": "Ошибка: <code>{}</code>",
-        "RuntimeError": "юз инлайн бота не найден",
-        "not_supported_platform": "(┬┬＿┬┬) К сожалению, на эту платформу невозможно установить этот модуль.\n\n(〜^∇^)〜 Это не ошибка, пожалуйста, не обращайтесь в поддержку."
-    }
-
-    async def client_ready(self):
-        platform = utils.get_named_platform()
-        if platform in ("HikkaHost"):
-            raise loader.LoadError(self.strings("not_supported_platform"))
-    
     def __init__(self):
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
-                "ngrok_token",
-                None,
-                "Token from ngrok.com | Токен полученый на ngrok.com",
-                validator=loader.validators.Hidden(),
-            ),
-            loader.ConfigValue(
-                "mini_app_url",
-                None,
-                "Mini app direct url | Директ ссылка на ваше мини приложение",
+                "serveo_subdomain",
+                "",
+                "Custom serveo subdomain (leave empty for random) | Кастомный поддомен serveo (оставь пустым для случайного)",
                 validator=loader.validators.String(),
             ),
             loader.ConfigValue(
-                "block_light",
-                "#D8E3E7",
-                "Light board block color | Цвет светлых полей на доске",
-                validator=loader.validators.String()
-            ),
-            loader.ConfigValue("block_dark",
-                "#7699AF",
-                "Dark board block color | Цвет тёмных полей на доске",
-                validator=loader.validators.String()
-            ),
-            loader.ConfigValue(
-                "select_block",
-                "#FF5A5A",
-                "Selected block color | Цвет для выделения полей на доске",
-                validator=loader.validators.String()
-            ),
-            loader.ConfigValue(
-                "move_pieces_color",
-                "#58B4FF",
-                "Move highlight color | Цвет подсвечиваниях перехода на другую позицию",
-                validator=loader.validators.String()
-            ),
-            loader.ConfigValue(
-                "result_win", 
-              "#00BE16", 
-                "Winner color | Блок цвета победителя",
-                validator=loader.validators.String()
-            ),
-            loader.ConfigValue(
-                "result_lose",
-                "#BE0000",
-                "Loser color | Блок цвета проигравшего",
-                validator=loader.validators.String()
-            ),
-            loader.ConfigValue(
-                "result_draw",
-                "#434343",
-                "Draw color | Блок цвета при ничьей",
-                validator=loader.validators.String()
-            ),
-            loader.ConfigValue(
-                "arrow_color",
-                "#BD3667",
-                "Arrow color | Цвет стрелки",
-                validator=loader.validators.String()
+                "mini_app_url",
+                "",
+                "Mini-app URL from BotFather (leave empty for serveo) | URL мини-приложения от BotFather (оставь пустым для serveo)",
+                validator=loader.validators.String(),
             ),
         )
-        
         self.runner = None
         self.tunnel_url = None
         self.access_token = None
-        self.games_cache = []
-        self.games_dump = ""
+        self.games = {}
+        self._frontend_html = None
+        self._tunnel_proc = None
+        self._game_slots = {}
 
-    def theme_config_dict(self):
-        return {
-            "block_light": self.config["block_light"],
-            "block_dark": self.config["block_dark"],
-            "select_block": self.config["select_block"],
-            "move_pieces_color": self.config["move_pieces_color"],
-            "result_win": self.config["result_win"],
-            "result_lose": self.config["result_lose"],
-            "result_draw": self.config["result_draw"],
-            "arrow_color": self.config["arrow_color"],
-        }
+    async def client_ready(self, client, db):
+        self._client = client
+        self._db = db
+        self._me = await client.get_me()
 
     async def refresh_games_cache(self):
-        chess = self.lookup("chess")
-        if not chess or not getattr(chess, "games", None):
-            self.games_cache = []
-            self.games_dump = ""
-            return
-
-        chunks = []
-        items = list(chess.games.items())
-
-        def sort_key(item):
-            key = str(item[0])
-            return (0, int(key)) if key.isdigit() else (1, key)
-
-        for _, game in sorted(items, key=sort_key, reverse=True):
-            node = None
-
-            if isinstance(game, dict):
-                game_obj = game.get("game", {})
-                if isinstance(game_obj, dict):
-                    node = game_obj.get("root_node") or game_obj.get("node")
-                if node is None:
-                    node = game.get("root_node") or game.get("node")
-
-            if node is None and hasattr(game, "game"):
-                game_obj = getattr(game, "game", None)
-                if isinstance(game_obj, dict):
-                    node = game_obj.get("root_node") or game_obj.get("node")
-
-            if node is None and hasattr(game, "root_node"):
-                node = getattr(game, "root_node", None)
-
-            if node is None and hasattr(game, "node"):
-                node = getattr(game, "node", None)
-
-            if node:
-                chunks.append(str(node).strip())
-
-        self.games_cache = [x for x in chunks if x]
-        self.games_dump = "\n\n".join(self.games_cache)
-
-    async def get_me_json(self):
-        me = await self.client.get_me()
-        fallback_photo = "https://i.pinimg.com/736x/6e/0a/0c/6e0a0cf688b30ba9de81b81bb32e49f9.jpg"
-        full_name = (getattr(me, "first_name", "") or "") + (
-            (" " + getattr(me, "last_name", "")) if getattr(me, "last_name", None) else ""
-        )
-        return {
-            "id": getattr(me, "id", None),
-            "username": getattr(me, "username", None),
-            "first_name": getattr(me, "first_name", None),
-            "last_name": getattr(me, "last_name", None),
-            "name": full_name.strip() or str(getattr(me, "id", "Unknown")),
-            "photo": fallback_photo,
-            "enemy_photo": fallback_photo,
-        }
-
-    def check_access(self, request):
-        token = request.query.get("token") or request.cookies.get("nochess_token")
-        return bool(self.access_token and token == self.access_token)
+        pass
 
     def ensure_access_token(self):
-        if self.access_token:
-            return self.access_token
-        self.access_token = self.get("access_token")
         if not self.access_token:
-            self.access_token = secrets.token_urlsafe(32)
-            self.set("access_token", self.access_token)
-        return self.access_token
+            self.access_token = secrets.token_hex(12)
 
-    async def read_remote_asset(self, url):
-        timeout = ClientTimeout(total=15)
-        async with ClientSession(timeout=timeout) as session:
-            async with session.get(url) as response:
-                if response.status != 200:
-                    raise RuntimeError(f"HTTP {response.status}: {url}")
-                return await response.text()
+    @staticmethod
+    def _strip_ansi(text):
+        return re.sub(r'\x1b\[[0-9;]*m', '', text)
 
-    async def load_web_assets(self):
-        html = await self.read_remote_asset(html_raw)
-        css = await self.read_remote_asset(css_raw)
-        js = await self.read_remote_asset(js_raw)
-        return html, css, js
-
-    def localication_script(self):
-        return (
-            "<script>(async()=>{"
-            "try{const me=await fetch('/api/me').then(r=>r.json());window.nochess_profile=me;if(typeof setNoChessProfile==='function'){setNoChessProfile(me);}}catch(_e){}"
-            "let rawGames=[];"
-            "try{const d=await fetch('/api/games').then(r=>r.json());rawGames=Array.isArray(d.games)?d.games:[];}catch(_e){}"
-            "const apply=()=>{if(typeof parsePgnToGameState!=='function'||typeof buildHistoryList!=='function')return false;"
-            "parsed_games=(rawGames||[]).map(g=>parsePgnToGameState(g)).filter(Boolean);"
-            "buildHistoryList();if(parsed_games.length>0&&typeof loadGame==='function')loadGame(0);return true;};"
-            "if(apply())return;"
-            "let attempts=0;const iv=setInterval(()=>{attempts++;if(apply()||attempts>40)clearInterval(iv);},250);"
-            "})();</script>"
-        )
-
-    def inject_runtime_config(self, html, css, js):
-        asset_root = asset_root_raw.rstrip("/")
-        if asset_root:
-            css = css.replace("url('bg.png')", f"url('{asset_root}/other/bg.png')")
-        theme_json = json.dumps(self.theme_config_dict(), ensure_ascii=False)
-        bootstrap = (
-            "<script>"
-            f"window.nochess_theme={theme_json};"
-            f"window.nochess_asset_root={json.dumps(asset_root)};"
-            "</script>"
-        )
-        html = html.replace('<link rel="stylesheet" href="style.css">', f"<style>{css}</style>")
-        html = html.replace('<script src="javascript.js"></script>', bootstrap + f"<script>{js}</script>")
-        return html
-
-    async def handle_home(self, request):
+    async def _kill_tunnel(self):
+        proc = self._tunnel_proc
+        if proc is None:
+            return
         try:
-            html, css, js = await self.load_web_assets()
-        except Exception as error:
-            return web.Response(
-                text=self.strings["asset_read_error"].format(utils.escape_html(str(error))),
-                status=500,
-            )
-        html = self.inject_runtime_config(html, css, js)
-        html = html.replace("</body>", self.localication_script() + "</body>")
-        response = web.Response(text=html, content_type="text/html")
-        response.set_cookie(
-            "nochess_token",
-            self.access_token,
-            max_age=86400,
-            httponly=True,
-            samesite="Lax",
-        )
-        return response
-
-    async def handle_games(self, request):
-        if not self.check_access(request):
-            return web.json_response({"error": "Unauthorized"}, status=401)
-        if not self.games_cache:
-            await self.refresh_games_cache()
-        return web.json_response({"games_dump": self.games_dump, "games": list(self.games_cache)})
-
-    async def handle_me(self, request):
-        if not self.check_access(request):
-            return web.json_response({"error": "Unauthorized"}, status=401)
-        return web.json_response(await self.get_me_json())
-
-    async def stop_server(self):
-        was_running = bool(self.runner)
-        try:
-            ngrok.kill()
+            proc.kill()
+        except ProcessLookupError:
+            pass
         except Exception:
             pass
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=3)
+        except (asyncio.TimeoutError, Exception):
+            pass
+        self._tunnel_proc = None
+
+    async def stop_server(self):
+        await self._kill_tunnel()
+        was_running = self.runner is not None
         if self.runner:
-            await self.runner.cleanup()
+            try:
+                await self.runner.cleanup()
+            except Exception:
+                pass
             self.runner = None
         self.tunnel_url = None
+        self.access_token = None
+        self.config["mini_app_url"] = ""
         return was_running
+
+    async def start_server(self, port):
+        app = web.Application()
+        app.router.add_get("/", self.handle_home)
+        app.router.add_get("/ws/{game_id}", self.handle_ws)
+        app.router.add_get("/api/game/{game_id}/legal", self.handle_legal)
+        self.runner = web.AppRunner(app)
+        await self.runner.setup()
+        await web.TCPSite(self.runner, "127.0.0.1", port).start()
+        return port
+
+    async def handle_home(self, request):
+        if self._frontend_html is None:
+            async with ClientSession() as sess:
+                async with sess.get(FRONTEND_URL) as resp:
+                    if resp.status == 200:
+                        self._frontend_html = await resp.text()
+                    else:
+                        return web.Response(status=500, text="Failed to load frontend")
+        return web.Response(body=self._frontend_html, content_type="text/html")
+
+    def _make_game_state(self, game):
+        board = game["board"]
+        fen = board.fen()
+        turn = "w" if board.turn else "b"
+        moves = []
+        for m in board.move_stack:
+            moves.append(m.uci())
+        in_check = board.is_check()
+        return {
+            "fen": fen,
+            "turn": turn,
+            "status": game.get("status", "playing"),
+            "result": game.get("result"),
+            "reason": game.get("reason"),
+            "moves": moves,
+            "white": game.get("white", ""),
+            "black": game.get("black", ""),
+            "in_check": in_check,
+        }
+
+    async def handle_legal(self, request):
+        game_id = request.match_info["game_id"]
+        square = request.query.get("square", "")
+        game = self.games.get(game_id)
+        if not game:
+            return web.json_response({"moves": []}, status=404)
+        legal = [m.uci() for m in game["board"].legal_moves]
+        if square:
+            legal = [m for m in legal if m.startswith(square)]
+        return web.json_response({"moves": legal})
+
+    async def handle_ws(self, request):
+        ws = web.WebSocketResponse()
+        await ws.prepare(request)
+        game_id = request.match_info["game_id"]
+        game = self.games.get(game_id)
+        if not game:
+            await ws.send_json({"type": "error", "message": "Game not found"})
+            await ws.close()
+            return ws
+        try:
+            auth_msg = await asyncio.wait_for(ws.receive(), timeout=10)
+            if auth_msg.type != WSMsgType.TEXT:
+                await ws.close(code=4003)
+                return ws
+            try:
+                auth_data = json.loads(auth_msg.data)
+            except json.JSONDecodeError:
+                await ws.close(code=4003)
+                return ws
+            if auth_data.get("type") != "auth":
+                await ws.close(code=4003)
+                return ws
+            init_data = auth_data.get("initData", "")
+            player_id = None
+            if init_data:
+                from urllib.parse import parse_qs
+                parsed = parse_qs(init_data)
+                user_json = parsed.get("user", ["{}"])[0]
+                try:
+                    user = json.loads(user_json)
+                    player_id = str(user.get("id", ""))
+                except Exception:
+                    pass
+            if not player_id:
+                player_id = auth_data.get("playerId", "")
+            white_id = str(game.get("white_id", ""))
+            black_id = str(game.get("black_id", ""))
+            if player_id and player_id not in (white_id, black_id):
+                await ws.close(code=4003)
+                return ws
+            color = None
+            if player_id == white_id:
+                color = "white"
+            elif player_id == black_id:
+                color = "black"
+            else:
+                slots = self._game_slots.setdefault(game_id, {"white": None, "black": None})
+                if slots["white"] is None or slots["white"] is ws:
+                    slots["white"] = ws
+                    color = "white"
+                elif slots["black"] is None or slots["black"] is ws:
+                    slots["black"] = ws
+                    color = "black"
+                else:
+                    await ws.close(code=4003)
+                    return ws
+            await ws.send_json({"type": "auth_ok", "color": color})
+        except asyncio.TimeoutError:
+            await ws.close(code=4003)
+            return ws
+        game["clients"].add(ws)
+        try:
+            gs = self._make_game_state(game)
+            await ws.send_json({"type": "game_state", "game": gs})
+            async for msg in ws:
+                if msg.type == WSMsgType.TEXT:
+                    try:
+                        data = json.loads(msg.data)
+                    except json.JSONDecodeError:
+                        continue
+                    if data.get("type") == "move":
+                        try:
+                            move = chess.Move.from_uci(data["uci"])
+                            if move not in game["board"].legal_moves:
+                                await ws.send_json({"type": "illegal", "uci": data["uci"]})
+                                continue
+                            game["board"].push(move)
+                            board = game["board"]
+                            game["status"] = "playing"
+                            game["result"] = None
+                            game["reason"] = None
+                            outcome = board.outcome()
+                            if outcome:
+                                if outcome.winner is not None:
+                                    game["status"] = "finished"
+                                    game["result"] = "1-0" if outcome.winner else "0-1"
+                                    game["reason"] = "checkmate"
+                                else:
+                                    game["status"] = "finished"
+                                    game["result"] = "1/2-1/2"
+                                    game["reason"] = "stalemate" if board.is_stalemate() else (
+                                        "insufficient" if board.is_insufficient_material() else (
+                                            "fifty_moves" if board.is_fifty_moves() else (
+                                                "threefold" if board.is_repetition(3) else "draw"
+                                            )
+                                        )
+                                    )
+                            gs = self._make_game_state(game)
+                            broadcast_msg = {"type": "game_state", "game": gs}
+                            if game["status"] == "finished":
+                                broadcast_msg = {"type": "game_over", "result": game["result"], "reason": game.get("reason", "")}
+                        except Exception:
+                            await ws.send_json({"type": "illegal", "uci": data.get("uci", "")})
+                            continue
+                    elif data.get("type") == "resign":
+                        game["status"] = "finished"
+                        game["result"] = "0-1" if game["board"].turn else "1-0"
+                        game["reason"] = "resign"
+                        broadcast_msg = {"type": "game_over", "result": game["result"], "reason": "resign"}
+                    elif data.get("type") == "draw":
+                        game["status"] = "finished"
+                        game["result"] = "1/2-1/2"
+                        game["reason"] = "agreement"
+                        broadcast_msg = {"type": "game_over", "result": game["result"], "reason": "agreement"}
+                    else:
+                        continue
+                    gs2 = self._make_game_state(game)
+                    for client in list(game["clients"]):
+                        if not client.closed:
+                            try:
+                                if client is ws:
+                                    await client.send_json({"type": "game_state", "game": gs2})
+                                else:
+                                    await client.send_json(broadcast_msg)
+                            except Exception:
+                                pass
+                elif msg.type == WSMsgType.ERROR:
+                    pass
+        except Exception:
+            pass
+        finally:
+            game["clients"].discard(ws)
+            slots = self._game_slots.get(game_id)
+            if slots:
+                for k in ("white", "black"):
+                    if slots[k] is ws:
+                        slots[k] = None
+        return ws
+
+    async def _start_tunnel(self, port):
+        await self._kill_tunnel()
+        cf_bin = await self._find_or_download_cloudflared()
+        if cf_bin:
+            return await self._start_cloudflared(cf_bin, port)
+        return await self._start_serveo_fallback(port)
+
+    def _get_asset_dir(self):
+        from pathlib import Path
+        try:
+            base = Path(__spec__.origin).parent if __spec__ and __spec__.origin else Path().resolve()
+        except Exception:
+            base = Path().resolve()
+        d = base / "Assets" / "NoChess"
+        d.mkdir(parents=True, exist_ok=True)
+        return str(d)
+
+    def _find_cloudflared(self):
+        import os as _os
+        from pathlib import Path
+        paths = [
+            "/usr/local/bin/cloudflared",
+            "/usr/bin/cloudflared",
+        ]
+        asset_dir = self._get_asset_dir()
+        paths.insert(0, _os.path.join(asset_dir, "cloudflared"))
+        for p in paths:
+            if _os.path.isfile(p) and _os.access(p, _os.X_OK):
+                return p
+        return None
+
+    async def _find_or_download_cloudflared(self):
+        found = self._find_cloudflared()
+        if found:
+            return found
+        import os as _os
+        asset_dir = self._get_asset_dir()
+        dest = _os.path.join(asset_dir, "cloudflared")
+        url = "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64"
+        proc = await asyncio.create_subprocess_exec(
+            "curl", "-sL", "-o", dest, url,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=60)
+        except asyncio.TimeoutError:
+            proc.kill()
+            return None
+        if proc.returncode != 0 or not _os.path.isfile(dest):
+            return None
+        _os.chmod(dest, 0o755)
+        return dest
+
+    async def _start_cloudflared(self, cf_bin, port):
+        cmd = [cf_bin, "tunnel", "--no-autoupdate", "--url", f"http://127.0.0.1:{port}"]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        self._tunnel_proc = proc
+        url = None
+        deadline = asyncio.get_event_loop().time() + 30
+        buf = b""
+        while asyncio.get_event_loop().time() < deadline:
+            try:
+                line = await asyncio.wait_for(proc.stdout.readline(), timeout=1.0)
+            except asyncio.TimeoutError:
+                if proc.returncode is not None:
+                    buf_str = buf.decode(errors="replace")
+                    raise RuntimeError(f"cloudflared exited {proc.returncode}: {buf_str}")
+                continue
+            if not line:
+                if proc.returncode is not None:
+                    buf_str = buf.decode(errors="replace")
+                    raise RuntimeError(f"cloudflared exited {proc.returncode}: {buf_str}")
+                await asyncio.sleep(0.5)
+                continue
+            buf += line
+            line_str = line.decode(errors="replace")
+            match = re.search(r'https://[\w.-]+\.trycloudflare\.com', line_str)
+            if match:
+                url = match.group(0).rstrip("/")
+                break
+        if not url:
+            buf_str = buf.decode(errors="replace")
+            raise RuntimeError(f"No cloudflared URL received: {buf_str}")
+        return url
+
+    async def _start_serveo_fallback(self, port):
+        subdomain = (self.config["serveo_subdomain"] or "").strip()
+        if subdomain:
+            remote = f"{subdomain}:80:localhost:{port}"
+        else:
+            remote = f"80:localhost:{port}"
+        cmd = [
+            "ssh", "-T",
+            "-o", "StrictHostKeyChecking=accept-new",
+            "-o", "ServerAliveInterval=60",
+            "-o", "ExitOnForwardFailure=yes",
+            "-o", "ConnectTimeout=15",
+            "-R", remote,
+            "serveo.net",
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        self._tunnel_proc = proc
+        url = None
+        deadline = asyncio.get_event_loop().time() + 20
+        buf = b""
+        while asyncio.get_event_loop().time() < deadline:
+            try:
+                line = await asyncio.wait_for(proc.stdout.readline(), timeout=0.5)
+            except asyncio.TimeoutError:
+                if proc.returncode is not None:
+                    buf_str = self._strip_ansi(buf.decode(errors="replace"))
+                    raise RuntimeError(f"SSH exited {proc.returncode}: {buf_str}")
+                continue
+            if not line:
+                if proc.returncode is not None:
+                    buf_str = self._strip_ansi(buf.decode(errors="replace"))
+                    raise RuntimeError(f"SSH exited {proc.returncode}: {buf_str}")
+                await asyncio.sleep(0.5)
+                continue
+            buf += line
+            line_str = self._strip_ansi(line.decode(errors="replace"))
+            match = re.search(r'https?://[\w.-]+\.serveo(?:usercontent)?\.(?:net|com)', line_str)
+            if match:
+                url = match.group(0).rstrip("/")
+                break
+        if not url:
+            buf_str = self._strip_ansi(buf.decode(errors="replace"))
+            raise RuntimeError(f"No serveo URL received: {buf_str}")
+        return url
+    async def _auto_cma(self):
+        try:
+            bot_username = (await self.inline.bot.get_me()).username
+            bot_username = (bot_username or "").strip().lstrip("@")
+            if not bot_username:
+                return None
+            web_url = (self.tunnel_url or "").strip()
+            if not web_url or "t.me/" in web_url:
+                return None
+            try:
+                await self._client.send_message("@BotFather", "/cancel")
+                await asyncio.sleep(0.5)
+            except Exception:
+                pass
+            async with self._client.conversation("@BotFather", timeout=60) as conv:
+                await conv.send_message("/newapp")
+                r = await conv.get_response(timeout=15)
+                if not r or "/newapp" not in (r.raw_text or ""):
+                    return None
+                await asyncio.sleep(0.3)
+                await conv.send_message(f"@{bot_username}")
+                r = await conv.get_response(timeout=15)
+                if not r:
+                    return None
+                await asyncio.sleep(0.3)
+                await conv.send_message("NoChessModule")
+                r = await conv.get_response(timeout=15)
+                if not r:
+                    return None
+                await asyncio.sleep(0.3)
+                await conv.send_message("NoChess")
+                r = await conv.get_response(timeout=15)
+                if not r:
+                    return None
+                await asyncio.sleep(0.3)
+                try:
+                    await conv.send_file(botfather_photo_url)
+                    r = await conv.get_response(timeout=8)
+                except Exception:
+                    pass
+                await asyncio.sleep(0.3)
+                await conv.send_message("/empty")
+                r = await conv.get_response(timeout=15)
+                if not r:
+                    return None
+                await asyncio.sleep(0.3)
+                await conv.send_message(web_url)
+                r = await conv.get_response(timeout=20)
+                if not r:
+                    return None
+                await asyncio.sleep(0.3)
+                await conv.send_message("NoChess")
+                try:
+                    await conv.get_response(timeout=15)
+                except Exception:
+                    pass
+            direct_link = f"https://t.me/{bot_username}/NoChess"
+            self.config["mini_app_url"] = direct_link
+            return direct_link
+        except Exception:
+            return None
 
     async def send_form(self, message, url):
         await self.inline.form(
@@ -328,6 +691,8 @@ class NoChess(loader.Module):
 
     async def stop_callback(self, call: InlineCall):
         was_running = await self.stop_server()
+        self.games.clear()
+        self._game_slots.clear()
         await call.answer(
             self.strings["stopped"] if was_running else self.strings["not_running"],
             show_alert=False,
@@ -340,148 +705,116 @@ class NoChess(loader.Module):
             except Exception:
                 pass
 
-    @loader.command(ru_doc="[-kill] Вызываь веб интерфейс для просмотра партии")
-    async def nochess(self, message: Message):
-        """[-kill] Call web interface to view chess game"""
+    def _new_game_id(self):
+        return secrets.token_hex(16)
+
+    @loader.command(
+        ru_doc="[юзер] — создать шахматную партию через браузер",
+        ua_doc="[юзер] — створити шахову партію через браузер",
+        de_doc="[user] — Schachpartie im Browser starten",
+        jp_doc="[ユーザー] — ブラウザでチェスの対局を作成",
+        leet_doc="[us3r] — cr34t3 ch3ss g4m3 v14 br0ws3r",
+        neofit_doc="[user] — link up a chess game in the browser innit",
+        tiktok_doc="[юзер] — Замутить шахматную партию в браузере",
+        uwu_doc="[usew] — cweate a chess game in da bwowsew~",
+    )
+    async def nochess(self, message):
         try:
-            return await self.nochess_args(message)
+            return await self._nochess_run(message)
         except Exception as error:
             await self.stop_server()
             return await utils.answer(
                 message,
-                self.strings["ngrok_error"].format(utils.escape_html(str(error))),
+                self.strings["tunnel_error"].format(utils.escape_html(str(error))),
             )
 
-    async def nochess_args(self, message: Message):
-        args = (utils.get_args_raw(message) or "").strip().lower()
-        if args == "-kill":
-            was_running = await self.stop_server()
-            return await utils.answer(message, self.strings["stopped"] if was_running else self.strings["not_running"])
-        mini_url = (self.config["mini_app_url"] or "").strip().rstrip("/")
-        is_tg_direct = mini_url.startswith("https://t.me/")
-        if self.runner:
-            if is_tg_direct:
-                access = mini_url
-            else:
-                base = (self.tunnel_url or "").rstrip("/")
-                access = f"{base}/?token={self.access_token}" if base and self.access_token else base
-            await utils.answer(message, self.strings["already_running"])
-            if access:
-                await self.send_form(message, access)
-            return
-        if not self.config["ngrok_token"] and (not mini_url or is_tg_direct):
-            return await utils.answer(message, self.strings["ngrok_missing"])
-        await self.refresh_games_cache()
-        await utils.answer(message, self.strings["starting"])
-        self.ensure_access_token()
-        sock = socket.socket()
-        sock.bind(("", 0))
-        port = sock.getsockname()[1]
-        sock.close()
-        app = web.Application()
-        app.router.add_get("/", self.handle_home)
-        app.router.add_get("/api/games", self.handle_games)
-        app.router.add_get("/api/me", self.handle_me)
-        self.runner = web.AppRunner(app)
-        await self.runner.setup()
-        await web.TCPSite(self.runner, "127.0.0.1", port).start()
-        try:
-            if self.config["ngrok_token"]:
-                conf.get_default().auth_token = self.config["ngrok_token"]
-                tunnel = ngrok.connect(port)
-                self.tunnel_url = tunnel.public_url.rstrip("/")
-            else:
-                self.tunnel_url = mini_url
-        except Exception as error:
-            await self.stop_server()
-            return await utils.answer(
-                message,
-                self.strings["ngrok_error"].format(utils.escape_html(str(error))),
-            )
-        if is_tg_direct:
-            access_url = mini_url
+    async def _nochess_run(self, message):
+        opponent = None
+        opponent_name = None
+        if message.is_reply:
+            reply = await message.get_reply_message()
+            if reply and getattr(reply, "sender_id", None):
+                opponent = reply.sender_id
+                ent = await self._client.get_entity(opponent)
+                opponent_name = getattr(ent, "first_name", None) or str(opponent)
         else:
-            base = (self.tunnel_url or "").rstrip("/")
-            access_url = f"{base}/?token={self.access_token}" if base and self.access_token else base
-        await self.send_form(message, access_url)
+            args = utils.get_args_raw(message)
+            if args:
+                try:
+                    ent = await self._client.get_entity(args)
+                    opponent = ent.id
+                    opponent_name = getattr(ent, "first_name", None) or str(opponent)
+                except Exception:
+                    await utils.answer(message, self.strings["no_opponent"])
+                    return
+        if opponent is None:
+            await utils.answer(message, self.strings["no_opponent"])
+            return
 
-    @loader.command(ru_doc="Создает и настраивает эпку")
-    async def cma(self, message: Message):
-        """Create and setup mini-app"""
-        raw_args = (utils.get_args_raw(message) or "").strip()
-        parts = raw_args.split()
-        web_url = ""
-        short_name = "NoChess"
-        if parts:
-            web_url = parts[0]
-        if len(parts) > 1:
-            short_name = parts[1]
-        if not web_url:
-            candidate = (self.tunnel_url or "").strip()
-            if not candidate:
-                candidate = (self.config["mini_app_url"] or "").strip()
-            if candidate.startswith("https://t.me/"):
-                candidate = ""
-            web_url = candidate
-        if not web_url:
-            return await utils.answer(message, self.strings["cma_need_url"])
-        self.ensure_access_token()
-        if web_url.startswith("http") and "t.me/" not in web_url:
-            parsed = urlsplit(web_url)
-            query = dict(parse_qsl(parsed.query, keep_blank_values=True))
-            query["token"] = self.access_token
-            web_url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, urlencode(query), parsed.fragment))
-        await utils.answer(message, self.strings["cma_start"])
-        try:
-            bot_username = (await self.inline.bot.get_me()).username
-            bot_username = (bot_username or "").strip().lstrip("@")
-            if not bot_username:
-                raise RuntimeError(self.strings["RuntimeError"])
-            await self.client.send_message("@BotFather", "/cancel")
-            await asyncio.sleep(0.9)
+        my_name = (
+            getattr(self._me, "first_name", None)
+            or getattr(self._me, "username", None)
+            or str(getattr(self._me, "id", "?"))
+        )
 
-            async with self.client.conversation("@BotFather", timeout=120) as conv:
-                await conv.send_message("/newapp")
-                await conv.get_response()
-                await asyncio.sleep(0.8)
-                await conv.send_message(f"@{bot_username}")
-                await conv.get_response()
-                await asyncio.sleep(0.8)
-                await conv.send_message("NoChessModule")
-                await conv.get_response()
-                await asyncio.sleep(0.8)
-                await conv.send_message("NoChess")
-                await conv.get_response()
-                await asyncio.sleep(0.8)
-                await conv.send_file(botfather_photo_url)
-                await conv.get_response()
-                await asyncio.sleep(0.8)
-                await conv.send_message("/empty")
-                await conv.get_response()
-                await asyncio.sleep(0.8)
-                await conv.send_message(web_url)
-                await conv.get_response()
-                await asyncio.sleep(0.8)
-                await conv.send_message(short_name)
-                await conv.get_response()
-
-            direct_link = f"https://t.me/{bot_username}/{short_name}"
-            module_ref = None
+        if not self.runner:
+            await utils.answer(message, self.strings["starting"])
+            self.ensure_access_token()
+            sock = socket.socket()
+            sock.bind(("", 0))
+            port = sock.getsockname()[1]
+            sock.close()
+            await self.start_server(port)
             try:
-                module_ref = self.lookup("NoChess")
-            except Exception:
-                module_ref = None
-            if module_ref:
-                module_ref.config["mini_app_url"] = direct_link
-            else:
-                self.config["mini_app_url"] = direct_link
-            await utils.answer(message, self.strings["cma_done"])
-        except Exception as error:
-            await utils.answer(message, self.strings["cma_error"].format(utils.escape_html(str(error))))
+                self.tunnel_url = await self._start_tunnel(port)
+            except Exception as error:
+                await self.stop_server()
+                return await utils.answer(
+                    message,
+                    self.strings["tunnel_error"].format(utils.escape_html(str(error))),
+                )
+        elif message.is_reply:
+            await utils.answer(message, self.strings["already_running"])
 
-    @loader.command(ru_doc="ВАЖНО К ПРОЧТЕНИЮ")
-    async def about(self, message: Message):
-        """IMPORTANT READING"""
-        await utils.answer(message, self.strings["about_text"])
-    async def on_unload(self):
-        await self.stop_server()
+        mini_url = (self.config["mini_app_url"] or "").strip()
+        if not mini_url:
+            await self._auto_cma()
+
+        game_id = self._new_game_id()
+        board = chess.Board()
+        my_id = str(getattr(self._me, "id", ""))
+        self.games[game_id] = {
+            "board": board,
+            "status": "playing",
+            "result": None,
+            "reason": None,
+            "clients": set(),
+            "white": my_name,
+            "black": opponent_name,
+            "white_id": my_id,
+            "black_id": str(opponent),
+            "created_at": int(time.time()),
+        }
+
+        mini_url = (self.config["mini_app_url"] or "").strip().rstrip("/")
+        if mini_url.startswith("https://t.me/"):
+            game_url = f"{mini_url}?startapp={game_id}"
+        else:
+            game_url = f"{self.tunnel_url}/?game={game_id}"
+        await self.send_form(message, game_url)
+
+    @loader.command(
+        ru_doc="Останавливает сервер NoChess",
+        ua_doc="Зупиняє сервер NoChess",
+        de_doc="Stoppt den NoChess-Server",
+        jp_doc="NoChessサーバーを停止します",
+        leet_doc="St0p5 N0Ch3ss s3rv3r",
+        neofit_doc="Shuts down NoChess server",
+        tiktok_doc="Вырубает NoChess сервер",
+        uwu_doc="Stops da NoChess sewvew~",
+    )
+    async def ncstopcmd(self, message):
+        was_running = await self.stop_server()
+        self.games.clear()
+        self._game_slots.clear()
+        await utils.answer(message, self.strings["stopped"] if was_running else self.strings["not_running"])
