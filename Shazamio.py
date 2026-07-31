@@ -1,14 +1,14 @@
 # meta pic: https://r2.fakecrime.bio/uploads/54b3c78d-38cb-4970-b925-18b7ec2b268d.jpg
 # meta banner: https://r2.fakecrime.bio/uploads/54b3c78d-38cb-4970-b925-18b7ec2b268d.jpg
-# requires: https://files.pythonhosted.org/packages/2f/66/31ecae67c373421db10f250a83d80653d6908f7d95080c46816102bd1fda/shazamio-0.8.1.tar.gz https://files.pythonhosted.org/packages/dd/4d/7ecffb341d646e016be76e36f5a42cb32f409c9ca21a57b68f067fad3fc7/python_ffmpeg-2.0.12.tar.gz
-# meta developer: @SunnexGB
+# requires: https://files.pythonhosted.org/packages/dd/4d/7ecffb341d646e016be76e36f5a42cb32f409c9ca21a57b68f067fad3fc7/python_ffmpeg-2.0.12.tar.gz ShazamAPI audioop-lts
+# meta developer: @H_SunMods
+
 #current version
-__version__ = (1, 0, 0)
+__version__ = (2, 0, 0)
 
 from .. import loader, utils
-import os
 import asyncio
-from shazamio import Shazam
+from ShazamAPI import Shazam
 
 @loader.tds
 class Shazamio(loader.Module):
@@ -31,6 +31,8 @@ class Shazamio(loader.Module):
                       "<emoji document_id=4967826519087907994>🔗</emoji><a href=\"{url}\">Listen on Shazam</a>",
         "shazam_history": "<emoji document_id=4969829017524896906>〰️</emoji>| <b>Your last 10 recognised songs</b>", # i put it off for later and then forgot i wanted to implement it
         "no_history": "<emoji document_id=4970064390322652183>〰️</emoji>| <b>What do you want to see here?</b>", # i put it off for later and then forgot i wanted to implement it
+        "unknown_artist": "Unknown Artist",
+        "unknown_title": "Unknown Title",
     }
 
     strings_ru = {
@@ -51,6 +53,9 @@ class Shazamio(loader.Module):
                       "<emoji document_id=4967826519087907994>🔗</emoji><a href=\"{url}\">Слушайте на Shazam</a>",
         "shazam_history": "<emoji document_id=4969829017524896906>〰️</emoji>| <b>Твои 10 последних распознаных треков</b>", # на потом,я забыл что я хотел это реализовать
         "no_history": "<emoji document_id=4970064390322652183>〰️</emoji>| <b>Ну и что ты тут хотел увидеть?</b>", # на потом,я забыл что я хотел это реализовать
+        "unknown_artist": "Неизвестный Исполнитель",
+        "unknown_title": "Неизвестный трек", # песня хз,я бы назвал сонг. Пусть будет так.
+
     }
 
     def __init__(self):
@@ -59,6 +64,15 @@ class Shazamio(loader.Module):
                 "ffmpeg",
                 "Path to ffmpeg executable",
         )
+
+    def recog_track(self, media_bytes):
+        shazam = Shazam(media_bytes)
+        recog = shazam.recognizeSong()
+        try:
+            result = next(recog)
+        except StopIteration:
+            return None
+        return result[1].get("track")
 
     @loader.command(ru_doc="Распознать музыку (Ответом на видео)")
     async def shazam(self, message):
@@ -73,52 +87,30 @@ class Shazamio(loader.Module):
             return
 
         await utils.answer(message, self.strings["processing"])
-        downloaded_path = await message.client.download_media(reply.video)
-        video_path = os.path.abspath(downloaded_path)
-        base, _ = os.path.splitext(video_path)
-        audio_path = f"{base}.mp3"
+        media_bytes = await reply.download_media(bytes)
 
+        await utils.answer(message, self.strings["shazaming"])
+        zaloopa = asyncio.get_event_loop()
         try:
-            cmd = (
-                f'{self.config["ffmpeg_path"]} -i "{video_path}" '
-                f'-y -vn -ab 128k -ar 44100 -f mp3 "{audio_path}"'
-            )
-            proc = await asyncio.create_subprocess_shell(
-                cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-            await proc.communicate()
+            track = await zaloopa.run_in_executor(None, self.recog_track, media_bytes)
+        except Exception:
+            await utils.answer(message, self.strings["recognize_error"])
+            return
+        if not track:
+            await utils.answer(message, self.strings["not_found"])
+            return
 
-            if not os.path.exists(audio_path):
-                await utils.answer(message, self.strings["ffmpeg_error"])
-                return
+        artist = track.get("subtitle", "Unknown Artist")
+        title = track.get("title", "Unknown Title")
+        url = track.get("url")
 
-            await utils.answer(message, self.strings["shazaming"])
-            shazam = Shazam()
-            result = await shazam.recognize(audio_path)
-
-            track = result.get("track")
-            if track:
-                title = track.get("title", "Unknown Title")
-                artist = track.get("subtitle", "Unknown Artist")
-                url = track.get("url")
-
-                if url:
-                    text = self.strings["result_url"].format(
-                        title=title, artist=artist, url=url
-                    )
-                else:
-                    text = self.strings["result"].format(
-                        title=title, artist=artist
-                    )
-
-                await utils.answer(message, text)
-            else:
-                await utils.answer(message, self.strings["not_found"])
-
-        finally:
-            if os.path.exists(video_path):
-                os.remove(video_path)
-            if os.path.exists(audio_path):
-                os.remove(audio_path)
+        if url:
+            text = self.strings["result_url"].format(
+                artist=artist, title=title, url=url
+                )
+        else:
+            text = self.strings["result"].format(
+                artist=artist, title=title
+                )
+            
+        await utils.answer(message, text)
