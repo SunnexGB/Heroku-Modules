@@ -1,7 +1,8 @@
 # meta developer: @H_SunMods
 # meta banner: https://r2.fakecrime.bio/uploads/7c43eb05-4387-48f8-bbb2-20c5fad2f85f.jpg
+# возможно я когда то все это перепишу...
 # current ver
-__version__ = (1, 0, 1)
+__version__ = (1, 0, 2)
  
 from .. import loader, utils
 from herokutl.types import Message
@@ -10,9 +11,9 @@ import asyncio
 import aiohttp
 import math
  
-FHETA_URL = "https://api.fixyres.com/grates"
-VECTOR_URL = "https:www.0xvector.lol/api/devstats"
-VECTOR_TOPMOD_URL = "https:www.0xvector.lol/api/usertopmod?users="
+fheta_api = "https://api.fixyres.com/grates"
+vector_api = "https://www.0xvector.lol/api/devstats"
+vector_topmod_api = "https://www.0xvector.lol/api/usertopmod?users="
 
 @loader.tds
 class DevStats(loader.Module):
@@ -36,6 +37,13 @@ class DevStats(loader.Module):
         "just_dislikes": "dislikes",
         "devtop_desc": "Your rank in developer leaderboard",
         "topmod_desc": "Your most popular module and its rank",
+        "provider_cfg": "Data source: multi (fheta + vector combined) | fheta | vector",
+        "display_mode_cfg": "Display mode: likes | both",
+        "usernames_cfg": "Your usernames with @ for placeholders",
+        "excluded_authors_cfg": "Authors to exclude from leaderboard",
+        "rank1_emoji_cfg": "Emoji for rank №1",
+        "rank2_emoji_cfg": "Emoji for rank №2",
+        "rank3_emoji_cfg": "Emoji for rank №3",
     }
  
     strings_ru = {
@@ -56,6 +64,13 @@ class DevStats(loader.Module):
         "just_dislikes": "Дизлайков",
         "devtop_desc": "Ваше место в рейтинге разработчиков",
         "topmod_desc": "Ваш самый популярный модуль и его место в топе",
+        "provider_cfg": "Источник: multi (fheta + vector вместе) | fheta | vector",
+        "display_mode_cfg": "Отображать: likes(лайки) | both(оба варианта)",
+        "usernames_cfg": "Ваши юзы с @ для плейсхолдеров",
+        "excluded_authors_cfg": "Те кого не будет в лидерборде",
+        "rank1_emoji_cfg": "Эмоджик около 1 места",
+        "rank2_emoji_cfg": "Эмоджик около 2 места",
+        "rank3_emoji_cfg": "Эмоджик около 3 места",
     }
  
     def __init__(self):
@@ -63,41 +78,41 @@ class DevStats(loader.Module):
             loader.ConfigValue(
                 "provider",
                 "multi",
-                "Data source: multi (fheta + vector combined) | fheta | vector",
+                lambda: self.strings("provider_cfg"),
                 validator=loader.validators.Choice(["multi", "fheta", "vector"]),
             ),
             loader.ConfigValue(
                 "display_mode",
                 "likes",
-                "Display mode: likes | both",
+                lambda: self.strings("display_mode_cfg"),
                 validator=loader.validators.Choice(["likes", "both"]),
             ),
             loader.ConfigValue(
                 "usernames",
                 [],
-                "Your usernames with @ for placeholders",
+                lambda: self.strings("usernames_cfg"),
                 validator=loader.validators.Series(loader.validators.String()),
             ),
             loader.ConfigValue(
                 "excluded_authors",
                 ["unknown"],
-                "Authors to exclude from leaderboard",
+                lambda: self.strings("excluded_authors_cfg"),
                 validator=loader.validators.Series(loader.validators.String()),
             ),
             loader.ConfigValue(
                 "rank1_emoji",
                 "<tg-emoji emoji-id=5429387335626145566>👑</tg-emoji>",
-                "Emoji for rank №1",
+                lambda: self.strings("rank1_emoji_cfg"),
             ),
             loader.ConfigValue(
                 "rank2_emoji",
                 "<tg-emoji emoji-id=5429351167706547656>🌟</tg-emoji>",
-                "Emoji for rank №2",
+                lambda: self.strings("rank2_emoji_cfg"),
             ),
             loader.ConfigValue(
                 "rank3_emoji",
                 "<tg-emoji emoji-id=5429365839314830135>✨</tg-emoji>",
-                "Emoji for rank №3",
+                lambda: self.strings("rank3_emoji_cfg"),
             ),
         )
  
@@ -164,15 +179,15 @@ class DevStats(loader.Module):
     async def fetch_sorted_devs(self) -> list:
         provider = self.config["provider"]
         if provider == "fheta":
-            data = await self.request_api(FHETA_URL)
+            data = await self.request_api(fheta_api)
             return self.aggregate_devs(data) if data else []
         if provider == "vector":
-            data = await self.request_api(VECTOR_URL)
+            data = await self.request_api(vector_api)
             return self.aggregate_vector(data) if isinstance(data, list) else []
         # multi
         fheta_data, vector_data = await asyncio.gather(
-            self.request_api(FHETA_URL),
-            self.request_api(VECTOR_URL),
+            self.request_api(fheta_api),
+            self.request_api(vector_api),
         )
         fheta_devs = self.aggregate_devs(fheta_data) if fheta_data else []
         vector_devs = self.aggregate_vector(vector_data) if isinstance(vector_data, list) else []
@@ -249,13 +264,13 @@ class DevStats(loader.Module):
         joined_usernames = ",".join(sorted(usernames))
 
         if provider in {"vector", "multi"}:
-            data = await self.request_api(f"{VECTOR_TOPMOD_URL}{joined_usernames}")
+            data = await self.request_api(f"{vector_topmod_api}{joined_usernames}")
             if isinstance(data, dict) and data.get("name") and data.get("rank"):
                 return f"{data['name']} ({data['rank']})"
             if provider == "vector":
                 return self.strings["topmod_not_found"] if data else self.strings["no_data"]
 
-        data = await self.request_api(FHETA_URL)
+        data = await self.request_api(fheta_api)
         if not data:
             return self.strings["no_data"]
         all_sorted = sorted(
