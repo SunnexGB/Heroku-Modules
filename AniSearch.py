@@ -8,7 +8,7 @@
 
 # meta pic: https://static.dan.tatar/anisearch_icon.png
 # meta banner: https://r2.fakecrime.bio/uploads/38dc99ec-1ed3-4e09-830f-785aec51435d.jpg
-# meta developer: Author: @Hikarikanta | Forked by: @SinnexGB
+# meta developer: Author: @Hikarikanta | Forked by: @SunnexGB
 # scope: heroku_only
 # scope: heroku_min 2.1.0
 
@@ -217,7 +217,7 @@ class AniSearchMod(loader.Module):
         mins, sex = divmod(ostatok, 60)
         return f"{hrs:02d}:{mins:02d}:{sex:02d}"
  
-    @loader.command(ru_doc="- Найти аниме по фото", jp_doc="写真でアニメを検索", alias="aser")
+    @loader.command(ru_doc="- Найти аниме по фото", jp_doc="- 写真でアニメを検索", alias="aser")
     async def anisearchcmd(self, message: Message):
         # зачем этот кадр вообще нужен,если в итоге ты отвечаешь скорее просто на фото.
         """- Search anime by photo"""
