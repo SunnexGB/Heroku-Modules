@@ -194,7 +194,7 @@ class AniSearchMod(loader.Module):
 
     async def client_ready(self):
         self.lib = await self.import_lib(
-            "https://github.com/SunnexGB/Heroku-Modules/raw/refs/heads/main/External%20libs/rich_message_lib.py",
+            "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/External%20libs/rich_message_lib.py",
             suspend_on_error=True,
         )
 
