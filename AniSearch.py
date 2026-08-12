@@ -8,7 +8,7 @@
 
 # meta pic: https://static.dan.tatar/anisearch_icon.png
 # meta banner: https://r2.fakecrime.bio/uploads/38dc99ec-1ed3-4e09-830f-785aec51435d.jpg
-# meta developer: Author: @Hikarikanta | Forked by: @SunnexGB
+# meta developer: Author: @hikarimods | Forked by: @SunnexGB
 # scope: heroku_only
 # scope: heroku_min 2.1.0
 
