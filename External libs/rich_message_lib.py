@@ -1,4 +1,4 @@
-# version: 2.0.0
+# version: 2.1.0
 import asyncio
 import secrets
 from herokutl import events
@@ -60,7 +60,20 @@ def caption_logic(caption):
     return f"<p>{text}</p>" if text else ""
 
 def table_row(row):
-    return "<tr>" + "".join(f"<td>{in_rich_text(cell.text)}</td>" for cell in row.cells) + "</tr>"
+    cells = []
+    for cell in row.cells:
+        tag = "th" if getattr(cell, "header", False) else "td"
+        attrs = ""
+        if getattr(cell, "colspan", None):
+            attrs += f' colspan="{cell.colspan}"'
+        if getattr(cell, "rowspan", None):
+            attrs += f' rowspan="{cell.rowspan}"'
+        if getattr(cell, "align_center", False):
+            attrs += ' align="center"'
+        elif getattr(cell, "align_right", False):
+            attrs += ' align="right"'
+        cells.append(f"<{tag}{attrs}>{in_rich_text(cell.text)}</{tag}>")
+    return "<tr>" + "".join(cells) + "</tr>"
 
 def list_item(item):
     cls = type(item).__name__
@@ -75,9 +88,25 @@ def list_item(item):
         return f"<li>{mark} {text}</li>"
     return f"<li>{text}</li>"
 
+media_tags = {
+    "PageBlockPhoto": "img",
+    "PageBlockVideo": "video",
+    "PageBlockAudio": "audio",
+}
 
+# ai solution - ну я просто хз как это норм рреализовать,едим то что дают.
 def media_tag_logic(block):
-    return caption_logic(getattr(block, "caption", None))
+    cls = type(block).__name__
+    tag = media_tags.get(cls, "img")
+    caption = getattr(block, "caption", None)
+    caption_text = in_rich_text(getattr(caption, "text", None)) if caption else ""
+    credit_text = in_rich_text(getattr(caption, "credit", None)) if caption else ""
+    media_tag = f'<img src=""/>' if tag == "img" else f'<{tag} src=""></{tag}>'
+    figcaption = ""
+    if caption_text or credit_text:
+        cite = f"<cite>{credit_text}</cite>" if credit_text else ""
+        figcaption = f"<figcaption>{caption_text}{cite}</figcaption>"
+    return f"<figure>{media_tag}{figcaption}</figure>"
 
 def work_w_collage(block):
     items_html = "".join(rich_to_html_handler(item) for item in block.items)
@@ -89,6 +118,13 @@ def work_w_blockquote(block):
     if caption:
         return f"<blockquote>{text}<cite>{caption}</cite></blockquote>"
     return f"<blockquote>{text}</blockquote>"
+
+def work_w_pullquote(block):
+    caption = in_rich_text(getattr(block, "caption", None))
+    text = in_rich_text(block.text)
+    if caption:
+        return f"<aside>{text}<cite>{caption}</cite></aside>"
+    return f"<aside>{text}</aside>"
 
 rich_and_html = {
     "PageBlockTitle": lambda b: f"<h1>{in_rich_text(b.text)}</h1>",
@@ -108,7 +144,7 @@ rich_and_html = {
     "PageBlockDivider": lambda b: "<hr/>",
     "PageBlockAnchor": lambda b: f'<a name="{b.name}"></a>',
     "PageBlockBlockquote": work_w_blockquote,
-    "PageBlockPullquote": work_w_blockquote,
+    "PageBlockPullquote": work_w_pullquote,
     "PageBlockBlockquoteBlocks": lambda b: (
         f"<blockquote>{''.join(rich_to_html_handler(x) for x in b.blocks)}"
         f"<cite>{in_rich_text(b.caption)}</cite></blockquote>"
@@ -119,8 +155,10 @@ rich_and_html = {
     "PageBlockCollage": work_w_collage,
     "PageBlockSlideshow": work_w_collage,
     "PageBlockTable": lambda b: (
-        (f"<p>{in_rich_text(b.title)}</p>" if getattr(b, "title", None) else "")
-        + f"<table>{''.join(table_row(row) for row in b.rows)}</table>"
+        f"<table{' bordered' if getattr(b, 'bordered', False) else ''}"
+        f"{' striped' if getattr(b, 'striped', False) else ''}>"
+        + (f"<caption>{in_rich_text(b.title)}</caption>" if getattr(b, "title", None) else "")
+        + f"{''.join(table_row(row) for row in b.rows)}</table>"
     ),
     "PageBlockList": lambda b: f"<ul>{''.join(list_item(i) for i in b.items)}</ul>",
     "PageBlockOrderedList": lambda b: f"<ol>{''.join(list_item(i) for i in b.items)}</ol>",
