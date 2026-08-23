@@ -285,6 +285,6 @@ class AniSearchMod(loader.Module):
             ),
             parse_mode="html",
             rich_mode="auto",
-            reply_to=self.lib.send_topic(message),
+            reply_to=self.lib.rich_send_topic(message),
         )
         await message.delete()
