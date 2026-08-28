@@ -1,3 +1,4 @@
+# requires: https://files.pythonhosted.org/packages/54/71/37f69f1370f9f2bc9d8fbc1ab90d3b510e4878cd966d63a602c4833f09fa/simple_rule34-1.0.0.8.tar.gz
 # meta banner: https://x0.at/FLUT.jpg
 # meta pic: https://x0.at/FLUT.jpg
 # meta developer: @H_SunMods
