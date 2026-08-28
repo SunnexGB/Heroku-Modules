@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1A1224">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>NoChess</title>
+<style>
+@font-face{font-family:'NoChess';src:url('https://raw.githubusercontent.com/sepiol026-wq/Heroku-Modules/fuck/Assets/NoChess/mr_granstandercleang.otf') format('opentype')}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:#1A1224;color:#eee;font-family:'NoChess',sans-serif;-webkit-font-smoothing:antialiased;height:100%;overflow-x:hidden;overscroll-behavior:none}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+
+.web_chess{display:flex;flex-direction:row;align-items:stretch;justify-content:center;padding:20px;gap:20px;min-height:100vh}
+.pgn_moves_board{background:#1E1E1E;border-radius:15px;padding:10px;display:flex;flex-direction:column;width:260px;min-width:260px;overflow:hidden}
+.moves_list_mobile{padding:8px;overflow-y:auto;flex:1;font-size:14px;color:#ccc}
+.moves_list_mobile .move_pair{display:flex;gap:8px;padding:3px 0}
+.moves_list_mobile .move_num{color:#666;min-width:28px}
+.moves_list_mobile .move_w{color:#eee;min-width:52px}
+.moves_list_mobile .move_b{color:#ddd;min-width:52px}
+
+.board-wrap{display:flex;align-items:center;justify-content:center;position:relative}
+.board-wrap canvas{display:block;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;border-radius:4px}
+.drag-piece{position:fixed;pointer-events:none;z-index:999;transition:transform .08s ease-out;filter:drop-shadow(0 8px 16px rgba(0,0,0,.5))}
+.drag-piece img{display:block}
+
+.main_board{background:rgba(0,0,0,0.33);border-radius:15px;padding:15px 10px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;width:260px;min-width:260px}
+.player_block{display:flex;flex-direction:column;align-items:center;gap:6px}
+.player_name{font-size:14px;color:#ccc;text-align:center}
+.player_avatar{width:80px;height:80px;border-radius:50%;background-size:cover;background-position:center;border:2px solid #555}
+.divider_line{height:4px}
+.divider_line svg{display:block}
+.timer{font-size:18px;color:#aaa;padding:4px 0;font-family:monospace}
+.board_menu{display:flex;gap:6px;justify-content:center;padding:4px 0;flex-wrap:wrap}
+.menu_btn{cursor:pointer;padding:6px 10px;background:#333;border-radius:8px;font-size:12px;transition:background .2s;border:none;color:#eee;font-family:'NoChess',sans-serif}
+.menu_btn:active{background:#555}
+.status_line{text-align:center;font-size:15px;padding:6px 0;color:#ccc}
+
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:500}
+.overlay .box{background:#1E1E1E;border-radius:15px;padding:30px;text-align:center;font-size:18px;max-width:360px}
+.overlay .box button{margin-top:12px;padding:8px 20px;background:#7699AF;border:none;border-radius:8px;color:#1A1224;cursor:pointer;font-family:'NoChess',sans-serif;font-size:14px}
+
+.promotion_popup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.7);z-index:400}
+.promotion_popup .pieces{display:flex;gap:8px;background:#1E1E1E;padding:12px;border-radius:15px}
+.promotion_popup .pieces img{width:64px;height:64px;cursor:pointer;transition:transform .1s}
+.promotion_popup .pieces img:active{transform:scale(1.15)}
+
+@media(max-width:900px){
+.web_chess{flex-direction:column;align-items:center;padding:10px;gap:8px}
+.pgn_moves_board,.main_board{width:100%;min-width:0}
+.moves_list_mobile{max-height:100px}
+}
+
+@media(max-width:500px){
+.web_chess{padding:4px;gap:4px}
+.board-wrap canvas{max-width:100vw;max-height:100vw;border-radius:0}
+.pgn_moves_board{order:2;border-radius:10px}
+.board-wrap{order:1}
+.main_board{order:3;flex-direction:row;flex-wrap:wrap;gap:6px;justify-content:center;padding:6px;border-radius:10px}
+.player_avatar{width:36px;height:36px}
+.player_name{font-size:12px}
+.timer{font-size:13px}
+.menu_btn{font-size:11px;padding:5px 8px}
+.status_line{font-size:13px;width:100%}
+.moves_list_mobile{font-size:12px;max-height:80px}
+}
+</style>
+</head>
+<body>
+<div class="web_chess" id="layout">
+<div class="pgn_moves_board">
+<div class="moves_list_mobile" id="moves_scroll">
+<span style="color:#666">Loading...</span>
+</div>
+</div>
+<div class="board-wrap" id="board_wrap">
+<canvas id="chessBoard"></canvas>
+</div>
+<div class="main_board" id="info_panel">
+<div class="player_block player_black">
+<div class="player_avatar avatar_black" style="background-image:url('https://i.pinimg.com/736x/6e/0a/0c/6e0a0cf688b30ba9de81b81bb32e49f9.jpg')"></div>
+<div class="player_name" id="black_name">Black</div>
+</div>
+<div class="divider_line top_line">
+<svg width="270" height="4" viewBox="0 0 270 4">
+<path d="M75 0H95V4H75V0Z" fill="white"/><path d="M50 0H70V4H50V0Z" fill="white"/>
+<path d="M25 0H45V4H25V0Z" fill="white"/><path d="M0 0H20V4H0V0Z" fill="white"/>
+<path d="M100 0H120V4H100V0Z" fill="white"/><path d="M125 0H145V4H125V0Z" fill="white"/>
+<path d="M150 0H170V4H150V0Z" fill="white"/><path d="M175 0H195V4H175V0Z" fill="white"/>
+<path d="M200 0H220V4H200V0Z" fill="white"/><path d="M225 0H245V4H225V0Z" fill="white"/>
+<path d="M250 0H270V4H250V0Z" fill="white"/>
+</svg>
+</div>
+<div class="timer timer_black" id="timer_black">--:--</div>
+<div class="board_menu">
+<button class="menu_btn" id="flip_btn">Flip</button>
+<button class="menu_btn" id="resign_btn">Resign</button>
+<button class="menu_btn" id="draw_btn">Draw</button>
+</div>
+<div class="status_line" id="status_line"></div>
+<div class="timer timer_white" id="timer_white">--:--</div>
+<div class="divider_line bottom_line">
+<svg width="270" height="4" viewBox="0 0 270 4">
+<path d="M75 0H95V4H75V0Z" fill="white"/><path d="M50 0H70V4H50V0Z" fill="white"/>
+<path d="M25 0H45V4H25V0Z" fill="white"/><path d="M0 0H20V4H0V0Z" fill="white"/>
+<path d="M100 0H120V4H100V0Z" fill="white"/><path d="M125 0H145V4H125V0Z" fill="white"/>
+<path d="M150 0H170V4H150V0Z" fill="white"/><path d="M175 0H195V4H175V0Z" fill="white"/>
+<path d="M200 0H220V4H200V0Z" fill="white"/><path d="M225 0H245V4H225V0Z" fill="white"/>
+<path d="M250 0H270V4H250V0Z" fill="white"/>
+</svg>
+</div>
+<div class="player_block player_white">
+<div class="player_avatar avatar_white" style="background-image:url('https://i.pinimg.com/736x/6e/0a/0c/6e0a0cf688b30ba9de81b81bb32e49f9.jpg')"></div>
+<div class="player_name" id="white_name">White</div>
+</div>
+</div>
+</div>
+<div class="overlay" id="overlay" style="display:none">
+<div class="box">
+<div id="overlay_msg"></div>
+<button id="overlay_btn">OK</button>
+</div>
+</div>
+<div class="promotion_popup" id="promo">
+<div class="pieces" id="promo_pieces"></div>
+</div>
+<div class="drag-piece" id="drag_piece" style="display:none"><img id="drag_img" src=""></div>
+<script>
+(function(){
+var BOARD_SIZE=8
+var BLOCK_SIZE=107
+var DPR=Math.min(window.devicePixelRatio||1,2)
+var LIGHT='#D8E3E7'
+var DARK='#7699AF'
+var SEL='#FFDF5A'
+var MFROM='rgba(88,180,255,0.4)'
+var MTO='rgba(135,206,250,0.4)'
+var HL='rgba(255,255,255,0.25)'
+var ASSET='https://raw.githubusercontent.com/sepiol026-wq/Heroku-Modules/fuck/Assets/NoChess'
+
+var PIECE_URLS={}
+var pieceNames={wP:'white-pawn',wR:'white-rook',wN:'white-knight',wB:'white-bishop',wQ:'white-queen',wK:'white-king',bP:'black-pawn',bR:'black-rook',bN:'black-knight',bB:'black-bishop',bQ:'black-queen',bK:'black-king'}
+Object.keys(pieceNames).forEach(function(k){PIECE_URLS[k]=ASSET+'/pieces/'+pieceNames[k]+'.png'})
+
+var SOUNDS={
+move_self:'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-self.mp3',
+move_opponent:'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-opponent.mp3',
+capture:'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/capture.mp3',
+game_start:'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-start.mp3',
+game_end:'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/game-end.mp3',
+move_check:'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/move-check.mp3',
+promote:'https://images.chesscomfiles.com/chess-themes/sounds/_MP3_/default/promote.mp3'
+}
+var FILES=['a','b','c','d','e','f','g','h']
+var RANKS=['8','7','6','5','4','3','2','1']
+
+var canvas=document.getElementById('chessBoard')
+var ctx=canvas.getContext('2d')
+var cssW=Math.min(window.innerWidth*0.9,window.innerHeight*0.55,856)
+canvas.style.width=cssW+'px'
+canvas.style.height=cssW+'px'
+canvas.width=BOARD_SIZE*BLOCK_SIZE*DPR
+canvas.height=BOARD_SIZE*BLOCK_SIZE*DPR
+ctx.scale(DPR,DPR)
+
+var params=new URLSearchParams(location.search)
+var gameId=params.get('game')||''
+try{if(!gameId&&window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initDataUnsafe){gameId=window.Telegram.WebApp.initDataUnsafe.start_param||''}}catch(_){}
+var initData=''
+try{if(window.Telegram&&window.Telegram.WebApp&&window.Telegram.WebApp.initData)initData=window.Telegram.WebApp.initData}catch(_){}
+var ws=null
+var reconnectTimer=null
+var game=null
+var board=null
+var selected=null
+var legalMoves=[]
+var moveFrom=null
+var moveTo=null
+var flipped=false
+var myColor='white'
+var wsReady=false
+var pieceImgs={}
+var loaded=0
+var total=12
+var pendingPromo=null
+var prevBoardStr=''
+var dragState=null
+var tapTouchId=null
+var tapStartBC=null
+var touchTapDone=false
+
+var elDrag=document.getElementById('drag_piece')
+var elDragImg=document.getElementById('drag_img')
+
+function sqToAlg(row,col){return FILES[col]+RANKS[row]}
+function algToSq(a){return[RANKS.indexOf(a[1]),FILES.indexOf(a[0])]}
+
+function fenToBoard(fen){
+var pos=fen.split(' ')[0]
+var rows=pos.split('/')
+var b=[]
+for(var r=0;r<8;r++){b[r]=[];var c=0;for(var i=0;i<rows[r].length;i++){var ch=rows[r][i];if(ch>='1'&&ch<='8'){for(var j=0;j<parseInt(ch);j++)b[r][c+j]=null;c+=parseInt(ch)}else{b[r][c]=ch;c++}}}
+return b
+}
+
+function boardToString(b){
+var s=''
+for(var r=0;r<8;r++){for(var c=0;c<8;c++){s+=b[r]?b[r][c]||'.':'.'}}
+return s
+}
+
+function canvasPos(ev){
+var rect=canvas.getBoundingClientRect()
+var cx=ev.touches?ev.touches[0].clientX:ev.clientX
+var cy=ev.touches?ev.touches[0].clientY:ev.clientY
+var sq=rect.width/BOARD_SIZE
+return{cx:cx,cy:cy,left:rect.left,top:rect.top,width:rect.width,height:rect.height,sq:sq}
+}
+
+function boardCoords(ev){
+var p=canvasPos(ev)
+var fx=(p.cx-p.left)/p.width*BOARD_SIZE
+var fy=(p.cy-p.top)/p.height*BOARD_SIZE
+var x=Math.floor(fx)
+var y=Math.floor(fy)
+if(x<0)x=0;if(x>7)x=7;if(y<0)y=0;if(y>7)y=7
+return{row:flipped?7-y:y,col:flipped?7-x:x,x:x,y:y}
+}
+
+function loadPieces(){
+Object.keys(PIECE_URLS).forEach(function(k){
+var img=new Image()
+img.onload=function(){loaded++;if(loaded>=total)renderBoard()}
+img.onerror=function(){loaded++;if(loaded>=total)renderBoard()}
+img.src=PIECE_URLS[k]
+pieceImgs[k]=img
+})
+}
+
+function isMyTurn(){
+if(!game||game.status==='finished')return false
+return game.turn===myColor[0]
+}
+
+function renderBoard(){
+var w=BOARD_SIZE*BLOCK_SIZE
+ctx.clearRect(0,0,w,w)
+for(var r=0;r<8;r++){
+for(var c=0;c<8;c++){
+var dr=flipped?7-r:r
+var dc=flipped?7-c:c
+var dark=(dr+dc)%2===1
+var bg=dark?DARK:LIGHT
+if(selected&&selected[0]===dr&&selected[1]===dc)bg=SEL
+else if(moveFrom&&moveFrom[0]===dr&&moveFrom[1]===dc)bg=MFROM
+else if(moveTo&&moveTo[0]===dr&&moveTo[1]===dc)bg=MTO
+ctx.fillStyle=bg
+ctx.fillRect(c*BLOCK_SIZE,r*BLOCK_SIZE,BLOCK_SIZE,BLOCK_SIZE)
+if(board&&board[dr]&&board[dr][dc]){
+var piece=board[dr][dc]
+if(dragState&&dragState.row===dr&&dragState.col===dc)continue
+var key=(piece===piece.toUpperCase()?'w':'b')+piece.toUpperCase()
+var img=pieceImgs[key]
+if(img)ctx.drawImage(img,c*BLOCK_SIZE,r*BLOCK_SIZE,BLOCK_SIZE,BLOCK_SIZE)
+}
+var alg=sqToAlg(dr,dc)
+var isDest=legalMoves.some(function(m){return m.endsWith(alg)})
+if(dragState){
+isDest=legalMoves.some(function(m){return m.endsWith(sqToAlg(dr,dc))})
+}
+if(isDest){
+var cx=c*BLOCK_SIZE+BLOCK_SIZE/2
+var cy=r*BLOCK_SIZE+BLOCK_SIZE/2
+if(board&&board[dr]&&board[dr][dc]&&(!dragState||dragState.row!==dr||dragState.col!==dc)){
+ctx.beginPath()
+ctx.arc(cx,cy,BLOCK_SIZE*0.42,0,2*Math.PI)
+ctx.strokeStyle='rgba(0,0,0,0.35)'
+ctx.lineWidth=4
+ctx.stroke()
+}else{
+ctx.beginPath()
+ctx.arc(cx,cy,BLOCK_SIZE*0.13,0,2*Math.PI)
+ctx.fillStyle='rgba(0,0,0,0.22)'
+ctx.fill()
+}
+}
+}
+}
+if(dragState){
+var dr=dragState.row;var dc=dragState.col
+ctx.fillStyle='rgba(255,223,90,0.3)'
+ctx.fillRect(dc*BLOCK_SIZE,dr*BLOCK_SIZE,BLOCK_SIZE,BLOCK_SIZE)
+}
+}
+
+function startDrag(ev){
+if(!wsReady||!game||game.status==='finished'||pendingPromo||!isMyTurn()||dragState)return
+var bc=boardCoords(ev)
+var dr=flipped?7-bc.y:bc.y
+var dc=flipped?7-bc.x:bc.x
+var piece=board&&board[dr]?board[dr][dc]:null
+if(!piece)return
+var turn=piece===piece.toUpperCase()?'w':'b'
+if(turn!==game.turn)return
+var alg=sqToAlg(dr,dc)
+var p=canvasPos(ev)
+var sqCSS=p.sq
+fetch('/api/game/'+gameId+'/legal?square='+alg)
+.then(function(r){return r.json()})
+.then(function(d){
+legalMoves=d.moves||[]
+var key=(piece===piece.toUpperCase()?'w':'b')+piece.toUpperCase()
+dragState={row:dr,col:dc,piece:piece,alg:alg,key:key,imgSrc:PIECE_URLS[key],startCX:p.cx,startCY:p.cy}
+selected=[dr,dc,alg]
+elDragImg.src=dragState.imgSrc
+elDrag.style.display='block'
+elDrag.style.left=(p.cx-sqCSS/2)+'px'
+elDrag.style.top=(p.cy-sqCSS/2)+'px'
+elDragImg.style.width=sqCSS+'px'
+elDragImg.style.height=sqCSS+'px'
+renderBoard()
+try{if(navigator.vibrate)navigator.vibrate(8)}catch(_){}
+})
+.catch(function(){legalMoves=[]})
+}
+
+function moveDrag(ev){
+if(!dragState)return
+var p=canvasPos(ev)
+elDrag.style.left=(p.cx-p.sq/2)+'px'
+elDrag.style.top=(p.cy-p.sq/2)+'px'
+var bc=boardCoords(ev)
+elDrag.style.transform='scale(1.12)'
+renderBoard()
+}
+
+function endDrag(ev){
+if(!dragState)return
+var bc=boardCoords(ev)
+var tr=flipped?7-bc.y:bc.y
+var tc=flipped?7-bc.x:bc.x
+var targetAlg=sqToAlg(tr,tc)
+elDrag.style.display='none'
+elDrag.style.transform='scale(1.0)'
+var ds=dragState
+dragState=null
+var matching=legalMoves.filter(function(m){return m.endsWith(targetAlg)})
+if(matching.length>0){
+var promo=matching.filter(function(m){return m.length===5})
+if(promo.length>0){
+pendingPromo={from:ds.alg,to:targetAlg,promos:promo.map(function(m){return m[4]})}
+showPromo()
+selected=null;legalMoves=[]
+return
+}
+var uci=ds.alg+matching[0].slice(2)
+ws.send(JSON.stringify({type:'move',uci:uci}))
+selected=null;legalMoves=[]
+try{if(navigator.vibrate)navigator.vibrate(4)}catch(_){}
+return
+}
+selected=null;legalMoves=[]
+renderBoard()
+}
+
+function tapBoard(ev){
+if(!wsReady||!game||game.status==='finished'||pendingPromo||!isMyTurn())return
+var bc=boardCoords(ev)
+var dr=flipped?7-bc.y:bc.y
+var dc=flipped?7-bc.x:bc.x
+var piece=board&&board[dr]?board[dr][dc]:null
+var alg=sqToAlg(dr,dc)
+if(selected&&selected[0]===dr&&selected[1]===dc){selected=null;legalMoves=[];renderBoard();return}
+if(selected){
+var matching=legalMoves.filter(function(m){return m.endsWith(alg)})
+if(matching.length>0){
+var promo=matching.filter(function(m){return m.length===5})
+if(promo.length>0){
+pendingPromo={from:selected[2],to:alg,promos:promo.map(function(m){return m[4]})}
+showPromo()
+return
+}
+var uci=selected[2]+matching[0].slice(2)
+ws.send(JSON.stringify({type:'move',uci:uci}))
+selected=null;legalMoves=[]
+return
+}
+if(piece&&game.turn===(piece===piece.toUpperCase()?'w':'b')){
+selected=[dr,dc,alg]
+fetchLegal(alg)
+return
+}
+selected=null;legalMoves=[]
+renderBoard()
+return
+}
+if(!piece)return
+if(game.turn!==(piece===piece.toUpperCase()?'w':'b'))return
+selected=[dr,dc,alg]
+fetchLegal(alg)
+}
+
+canvas.addEventListener('touchstart',function(ev){
+if(ev.touches.length!==1)return
+ev.preventDefault()
+tapTouchId=ev.touches[0].identifier
+tapStartBC=boardCoords(ev)
+},{passive:false})
+canvas.addEventListener('touchmove',function(ev){
+if(ev.touches.length!==1)return
+ev.preventDefault()
+if(!dragState){
+var bc=boardCoords(ev)
+var dx=Math.abs(bc.x-tapStartBC.x),dy=Math.abs(bc.y-tapStartBC.y)
+if(dx>5||dy>5){startDrag(ev)}
+}else{moveDrag(ev)}
+},{passive:false})
+canvas.addEventListener('touchend',function(ev){
+ev.preventDefault()
+if(dragState){endDrag(ev)}else{tapBoard(ev);touchTapDone=true}
+tapTouchId=null;tapStartBC=null
+},{passive:false})
+canvas.addEventListener('touchcancel',function(ev){
+if(dragState)endDrag(ev)
+tapTouchId=null;tapStartBC=null
+})
+
+canvas.addEventListener('mousedown',function(ev){
+if(ev.button!==0)return
+startDrag(ev)
+})
+window.addEventListener('mousemove',function(ev){
+if(!dragState)return
+moveDrag(ev)
+})
+window.addEventListener('mouseup',function(ev){
+if(!dragState)return
+endDrag(ev)
+})
+canvas.addEventListener('click',function(ev){
+if(dragState)return
+if(touchTapDone){touchTapDone=false;return}
+tapBoard(ev)
+})
+
+function showPromo(){
+var pieces=['q','r','b','n']
+var color=game.turn
+var el=document.getElementById('promo_pieces')
+el.innerHTML=''
+pieces.forEach(function(p){
+var img=document.createElement('img')
+img.src=PIECE_URLS[(color==='w'?'w':'b')+p.toUpperCase()]
+img.onclick=function(){
+var uci=pendingPromo.from+pendingPromo.to+p
+ws.send(JSON.stringify({type:'move',uci:uci}))
+document.getElementById('promo').style.display='none'
+pendingPromo=null
+}
+el.appendChild(img)
+})
+document.getElementById('promo').style.display='flex'
+}
+
+function fetchLegal(alg){
+fetch('/api/game/'+gameId+'/legal?square='+alg)
+.then(function(r){return r.json()})
+.then(function(d){legalMoves=d.moves||[];renderBoard()})
+.catch(function(){legalMoves=[];renderBoard()})
+}
+
+function playSound(name){
+try{var a=new Audio(SOUNDS[name]);a.volume=0.4;a.play()}catch(_){}
+}
+
+function updateUI(){
+if(!game)return
+document.getElementById('white_name').textContent=game.white||'White'
+document.getElementById('black_name').textContent=game.black||'Black'
+var sl=document.getElementById('status_line')
+if(game.status==='finished'){
+var txt=''
+if(game.result==='1-0')txt='White wins'
+else if(game.result==='0-1')txt='Black wins'
+else txt='Draw'
+sl.textContent=txt
+sl.style.color='#FFDF5A'
+}else if(game.in_check){
+sl.textContent='Check'
+sl.style.color='#BE0000'
+}else{
+sl.textContent=(game.turn==='w'?'White':'Black')+' to move'
+sl.style.color='#ccc'
+}
+var ms=document.getElementById('moves_scroll')
+if(game.moves&&game.moves.length>0){
+var h=''
+for(var i=0;i<game.moves.length;i+=2){
+h+='<div class="move_pair"><span class="move_num">'+(Math.floor(i/2)+1)+'.</span>'
+h+='<span class="move_w">'+game.moves[i]+'</span>'
+if(game.moves[i+1])h+='<span class="move_b">'+game.moves[i+1]+'</span>'
+h+='</div>'
+}
+ms.innerHTML=h
+ms.scrollTop=ms.scrollHeight
+}else{
+ms.innerHTML='<span style="color:#666">Waiting for moves...</span>'
+}
+}
+
+function onMessage(ev){
+try{var data=JSON.parse(ev.data)}catch(_){return}
+if(data.type==='auth_ok'){
+if(!board)board=fenToBoard('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+myColor=data.color||'white'
+if(data.color==='black'&&!flipped){flipped=true;
+var layout=document.getElementById('layout')
+if(layout)layout.classList.add('board_flipped')}
+if(!game)game={fen:'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',turn:'w',status:'active'}
+renderBoard();updateUI()
+playSound('game_start')
+return
+}
+if(data.type==='illegal'){
+document.getElementById('overlay_msg').textContent='Illegal move'
+document.getElementById('overlay').style.display='flex'
+selected=null;legalMoves=[];renderBoard()
+return
+}
+if(data.type==='game_state'&&data.game){
+var prevGame=game
+game=data.game
+var newBoard=fenToBoard(game.fen)
+var bs=boardToString(newBoard)
+if(game.moves&&game.moves.length>0){
+var last=game.moves[game.moves.length-1]
+var a=algToSq(last.slice(0,2))
+var b=algToSq(last.slice(2,4))
+moveFrom=a;moveTo=b
+}else{moveFrom=null;moveTo=null}
+selected=null;legalMoves=[]
+board=newBoard;renderBoard();updateUI()
+if(prevGame&&prevGame.moves&&game.moves.length>prevGame.moves.length){
+if(game.in_check)playSound('move_check')
+else if(prevBoardStr!==bs)playSound('capture')
+else playSound('move_opponent')
+}
+prevBoardStr=bs
+return
+}
+if(data.type==='game_over'){
+playSound('game_end')
+var ov=document.getElementById('overlay_msg')
+var txt='Game over'
+if(data.result){
+if(data.result==='1-0')txt='White wins!'
+else if(data.result==='0-1')txt='Black wins!'
+else if(data.result==='1/2-1/2')txt='Draw'
+}
+if(data.reason)txt+=' ('+data.reason+')'
+ov.textContent=txt
+document.getElementById('overlay').style.display='flex'
+}
+if(data.type==='error'){
+document.getElementById('overlay_msg').textContent=data.message||'Error'
+document.getElementById('overlay').style.display='flex'
+}
+}
+
+function connect(){
+if(!gameId)return
+if(ws){try{ws.close()}catch(_){}}
+var proto=location.protocol==='https:'?'wss:':'ws:'
+ws=new WebSocket(proto+'//'+location.host+'/ws/'+gameId)
+ws.onopen=function(){
+wsReady=true
+ws.send(JSON.stringify({type:'auth',initData:initData,playerId:''}))
+}
+ws.onclose=function(ev){
+wsReady=false;clearTimeout(reconnectTimer)
+if(ev.code===4003){
+document.getElementById('overlay_msg').textContent='Access denied'
+document.getElementById('overlay').style.display='flex'
+return
+}
+reconnectTimer=setTimeout(connect,2000)}
+ws.onmessage=onMessage
+ws.onerror=function(){ws.close()}
+}
+
+document.getElementById('overlay_btn').addEventListener('click',function(){
+document.getElementById('overlay').style.display='none'
+})
+
+document.getElementById('flip_btn').addEventListener('click',function(){
+flipped=!flipped
+var layout=document.getElementById('layout')
+if(flipped)layout.classList.add('board_flipped')
+else layout.classList.remove('board_flipped')
+renderBoard()
+})
+document.getElementById('resign_btn').addEventListener('click',function(){
+if(!wsReady||!game||game.status==='finished')return
+ws.send(JSON.stringify({type:'resign'}))
+})
+document.getElementById('draw_btn').addEventListener('click',function(){
+if(!wsReady||!game||game.status==='finished')return
+ws.send(JSON.stringify({type:'draw'}))
+})
+
+loadPieces()
+connect()
+})()
+</script>
+</body>
+</html>
