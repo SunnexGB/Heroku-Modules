@@ -14,7 +14,7 @@ from .._internal import restart
 class BranchManager(loader.Module):
     """Module for managment your userbot verions."""
 
-    strings_en = {
+    strings = {
         "name": "BranchManager",
         "panel_msg": """<b>Current repository:</b> <code>{repo_name}</code>
 <b>Current branch:</b> <code>{branch}</code>
@@ -222,10 +222,14 @@ on <code>{repo_name}</code> repository""",
                 }
             ],
             [
-                {"text": self.strings["repo_list_button"], "callback": self.branch_list}
+                {
+                    "text": self.strings["repo_list_button"], "callback": self.branch_list
+                }
             ],
             [
-                {"text": self.strings["close_button"], "action": "close"}
+                {
+                    "text": self.strings["close_button"], "action": "close"
+                }
             ],
         ]
 
