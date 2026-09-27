@@ -1,13 +1,24 @@
 # requires: Pillow
 
 import io
+import colorsys
 from PIL import Image
 from .. import loader
 
 class ThemeLib(loader.Library):
     developer = "@SunnexGB"
 
-    def extract_colors(self, img, count=10):
+    def extract_colors(
+        self,
+        img,
+        count=10,
+        bg_lightness_floor=0.5,
+        text_lightness_cap=0.64,
+        text_saturation_floor=0.55,
+        dark_text_lightness_floor=0.86,
+        dark_text_saturation_cap=0.18,
+        dark_accent_lightness_range=(0.5, 0.68),
+    ):
         small = img.copy().convert("RGB")
         if max(small.size) > 200:
             scale = 200 / max(small.size)
@@ -27,9 +38,64 @@ class ThemeLib(loader.Library):
                 buckets[key][2] += b
                 buckets[key][3] += 1
 
-        top = sorted(buckets.values(), key=lambda x: x[3], reverse=True)
-        colors = [(sr // c, sg // c, sb // c) for sr, sg, sb, c in top[:count]]
-        return tuple(f"{c[0]:02x}{c[1]:02x}{c[2]:02x}" for c in colors[:3])
+        sorted_color_buckets = sorted(buckets.values(), key=lambda bucket: bucket[3], reverse=True)
+        fck_me_mommy = [
+            (red_total // pixel_count, green_total // pixel_count, blue_total // pixel_count)
+            for red_total, green_total, blue_total, pixel_count in sorted_color_buckets[:count]
+        ]
+        fck_me_mommy = fck_me_mommy[:3]
+        if not fck_me_mommy:
+            return ()
+
+        bg_l = colorsys.rgb_to_hls(
+            fck_me_mommy[0][0] / 255, fck_me_mommy[0][1] / 255, fck_me_mommy[0][2] / 255
+        )[1]
+        is_dark_theme = bg_l <= bg_lightness_floor
+
+        color_roles = (
+            "bg", 
+            "text", 
+            "accent"
+        )
+
+        adjusted_colors = []
+        for color_index, (r, g, b) in enumerate(fck_me_mommy):
+            current_role = color_roles[color_index] if color_index < len(color_roles) else "accent"
+            h, l, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+
+            if current_role == "bg":
+                l, s = (0.0, 0.0) if is_dark_theme else (1.0, 0.0)
+
+            elif current_role == "text":
+                if is_dark_theme:
+                    if l < dark_text_lightness_floor:
+                        l = dark_text_lightness_floor
+                    if s > dark_text_saturation_cap:
+                        s = dark_text_saturation_cap
+                else:
+                    if l > text_lightness_cap:
+                        l = text_lightness_cap
+                    if s < text_saturation_floor:
+                        s = text_saturation_floor
+            else:
+                if is_dark_theme:
+                    lightness_minimum, lightness_maximum = dark_accent_lightness_range
+                    l = min(max(l, lightness_minimum), lightness_maximum)
+                    if s < text_saturation_floor:
+                        s = text_saturation_floor
+                else:
+                    if l > text_lightness_cap:
+                        l = text_lightness_cap
+                    if s < text_saturation_floor:
+                        s = text_saturation_floor
+
+            r, g, b = colorsys.hls_to_rgb(h, l, s)
+            adjusted_colors.append((round(r * 255), round(g * 255), round(b * 255)))
+
+        return tuple(
+            f"{max(0, min(255, r)):02x}{max(0, min(255, g)):02x}{max(0, min(255, b)):02x}"
+            for r, g, b in adjusted_colors
+        )
 
     def darken(self, h, factor=0.7):
         return (
