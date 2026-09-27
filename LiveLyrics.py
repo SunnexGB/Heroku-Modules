@@ -3,8 +3,9 @@
 # meta pic: https://r2.fakecrime.bio/uploads/6725e5a0-0c9e-48ed-be85-dfd857c2aa5f.jpg
 # meta banner: https://r2.fakecrime.bio/uploads/6725e5a0-0c9e-48ed-be85-dfd857c2aa5f.jpg
 # meta fhsdesc: Spotify, YaMusic, music, музыка, Lyrics, слова, текст, трек, песня
+# скоро фулл код рефакторинг...
 
-__version__ = (1, 0, 0)
+__version__ = (1, 1, 0)
 
 from herokutl.types import Message
 from .. import loader, utils
@@ -59,6 +60,8 @@ class LiveLyrics(loader.Module):
 
     def __init__(self):
         self._active_tasks: dict = {}
+        self.lrclib_endpoint = 'https://lrclib.net/api/search'
+        self.synclrc_endpoint = 'https://api.synclrc.dev'
         self.config = loader.ModuleConfig(
             loader.ConfigValue(
                 "emoji_current",
@@ -131,22 +134,71 @@ class LiveLyrics(loader.Module):
     def close(self, call: InlineCall):
         return call.delete()
 
+    async def get_data(self, url, params):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                url,
+                params=params,
+                timeout=aiohttp.ClientTimeout(total=self.config["request_timeout"]),
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                return await resp.json(content_type=None)
+
+    async def lrclib_api(self, artist, track):
+        results = await self.get_data(
+            self.lrclib_endpoint,
+            {
+                "track_name": track, 
+                "artist_name": artist
+            },
+        )
+        plain_lrc = None
+        for item in results or []:
+            if item.get('instrumental'):
+                continue
+            if item.get('syncedLyrics'):
+                return item['syncedLyrics'], item.get("plainLyrics")
+            plain_lrc = plain_lrc or item.get("plainLyrics")
+        return None, plain_lrc
+
+    async def synclrc_api(self, artist, track):
+        title = track.split(" - ")[0].strip()
+        results = await self.get_data(
+            f"{self.synclrc_endpoint}/search",
+            {"q": f"{artist} {title}"},
+        )
+        plain_lrc = None
+        for item in (results or {}).get("results") or []:
+            if item.get("instrumental"):
+                continue
+            lrc = item.get("lyrics") or {}
+            if lrc.get("synced"):
+                return lrc["synced"], lrc.get("plain")
+            plain_lrc = plain_lrc or lrc.get("plain")
+        exact = await self.get_data(
+            f"{self.synclrc_endpoint}/lyrics",
+            {
+                "track": title, 
+                "artist": artist
+            },
+        ) or {}
+        if exact.get("synced"):
+            return exact["synced"], exact.get("plain")
+        return None, plain_lrc or exact.get("plain")
+
     async def get_lyrics(self, artist: str, track: str):
         ClearTimeSections = re.sub(r"\(.*?\)|\[.*?\]", "", track).strip()
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    "https://lrclib.net/api/search",
-                    params={"track_name": ClearTimeSections, "artist_name": artist},
-                    timeout=aiohttp.ClientTimeout(total=self.config["request_timeout"]),
-                ) as resp:
-                    if resp.status == 200:
-                        result = await resp.json()
-                        return result[0] if result else None
+            for provider in (self.lrclib_api, self.synclrc_api):
+                synced, plain = await provider(artist, ClearTimeSections)
+                if synced or plain:
+                    return {
+                        "syncedLyrics": synced, 
+                        "plainLyrics": plain or ""
+                    }
         except asyncio.TimeoutError:
             return {"timeout": True}
-        except Exception:
-            pass
         return None
 
     def parse_synced(self, synced_text: str) -> list:
@@ -240,9 +292,9 @@ class LiveLyrics(loader.Module):
         finally:
             self._active_tasks.pop(track_id, None)
 
-    @loader.command(ru_doc="- показать синхронизированный текст песни")
+    @loader.command(ru_doc="- Spotify | показать синхронизированный текст песни")
     async def snowlcmd(self, message: Message):
-        """- show synchronized lyrics for current track"""
+        """- Spotify | show synchronized lyrics for current track"""
         mod = self.lookup("SpotifyMod")
         if not mod:
             form = await self.inline.form("⏳", message=message)
@@ -304,9 +356,9 @@ class LiveLyrics(loader.Module):
             self.za_loop_a(form, mod, track_id, artist_name, track_name, song_url, lines, plain, not_synced_str, heroku_module="SpotifyMod")
         )
 
-    @loader.command(ru_doc="- показать синхронизированный текст песни")
+    @loader.command(ru_doc="- YaMusic | показать синхронизированный текст песни")
     async def ynowlcmd(self, message: Message):
-        """- show synchronized lyrics for current track"""
+        """- YaMusic | show synchronized lyrics for current track"""
         mod = self.lookup("YaMusic")
         if not mod:
             form = await self.inline.form("⏳", message=message)
