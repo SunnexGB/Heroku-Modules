@@ -1,0 +1,3 @@
+[submodule "Assets/DateReg/DateRegLib"]
+	path = Assets/DateReg/DateRegLib
+	url = https://github.com/SunnexGB/telegram-id-age-research.git
