@@ -268,11 +268,7 @@ class AniSearchMod(loader.Module):
         time = f"{self.format_time(pos_from)} - {self.format_time(pos_to)}"
         proc = str(round(conf * 100, 2))
  
-        await self.lib.r_msg(
-            message.client,
-            self.inline,
-            message.chat_id,
-            r_message=self.strings("result").format(
+        await utils.answer(message, rich_message=self.strings("result").format(
                 title=self.header_title_language(title),
                 cover=coverImage,
                 ep=ep,
@@ -283,8 +279,4 @@ class AniSearchMod(loader.Module):
                 studios=studios_list,
                 e_links=links_list,
             ),
-            parse_mode="html",
-            rich_mode="auto",
-            reply_to=self.lib.rich_send_topic(message),
         )
-        await message.delete()
