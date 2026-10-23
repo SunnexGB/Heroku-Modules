@@ -1,8 +1,9 @@
 # requires: Pillow numpy
 # meta developer: @H_SunMods
 # meta banner: https://i.pinimg.com/control1/1200x/24/8d/40/248d40b6afa5bd3c3764556b50635691.jpg
-__version__ = (1, 0, 0)
-
+__version__ = (1, 0, 1)
+# потом обновлю либу,вообще не знаю зачем я продублировал стринги,видимо в скилет вставил уже стринги с другого модуля,а те забыл удалить
+# добавил описание коммандам
 import io
 import logging
 from herokutl.types import Message
@@ -21,8 +22,12 @@ class ASCII(loader.Module):
         "processing": "<tg-emoji emoji-id=5445373981290952548>®️</tg-emoji> | <b>Processing...</b>",
         "empty": "<tg-emoji emoji-id=5287613115180006030>🤬</tg-emoji> | <b>Empty result</b>",
         "result": "<pre>{art}</pre>",
-        "Failed_to_load_library": "Failed to load library",
-        "Conversion_error": "Conversion error",
+        "ascii_err": "Create ascii art error",
+        "cfg_width": "Sets base grid width for art | higher the number, the wider and more detailed it gets.",
+        "cfg_threshold": "Sets cutoff for what counts as a dot | black is a dot, white is empty",
+        "cfg_contrast": "Photo contrast | hard to explain ngl, but basically makes pic darker or lighter saturation wise.",
+        "cfg_chars": "Char count per message",
+        "cfg_invert": "Invert dot art | black is a dot, white is empty, so this basically flips them around"
     }
 
     strings_ru = {
@@ -32,17 +37,21 @@ class ASCII(loader.Module):
         "processing": "<tg-emoji emoji-id=5445373981290952548>®️</tg-emoji> | <b>Обработка...</b>",
         "empty": "<tg-emoji emoji-id=5287613115180006030>🤬</tg-emoji> | <b>Пустой результат</b>",
         "result": "<pre>{art}</pre>",
-        "Failed_to_load_library": "Не удалось загрузить библиотеку",
-        "Conversion_error": "Ошибка конвертации",
+        "ascii_err": "Ошибка создания арта",
+        "cfg_width": "Задает базовую ширину сетки для арта | чем выше число, тем шире и детализированнее получится арт.",
+        "cfg_threshold": "Определяет границу, при которой пиксель считается точкой | черный цвето - точка, белый - пустота",
+        "cfg_contrast": "Контраст на фото | я хз как обьяснить это,но условно делает фото более темным или более светлым в плане насыщености.",
+        "cfg_chars": "Кол-во символов в сообщении",
+        "cfg_invert": "Инвертировать арт из точек | черный цвет - точка,белый цвет - пустота,значит этот параметр меняет их местами"
     }
 
     def __init__(self):
         self.config = loader.ModuleConfig(
-            loader.ConfigValue("width", 50),
-            loader.ConfigValue("threshold", 0.65),
-            loader.ConfigValue("contrast", 2.0),
-            loader.ConfigValue("chars", 464),
-            loader.ConfigValue("invert", False),
+            loader.ConfigValue("width", 50,lambda: self.strings["porn_reulsts_doc"]),
+            loader.ConfigValue("threshold", 0.65,lambda: self.strings["porn_reulsts_doc"]),
+            loader.ConfigValue("contrast", 2.0,lambda: self.strings["porn_reulsts_doc"]),
+            loader.ConfigValue("chars", 464,lambda: self.strings["porn_reulsts_doc"]),
+            loader.ConfigValue("invert", False),lambda: self.strings["porn_reulsts_doc"],
         )
         self.lib = None
 
@@ -50,7 +59,7 @@ class ASCII(loader.Module):
         try:
             self.lib = await self.import_lib("https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/Assets/ASCII/ascii-lib.py", suspend_on_error=True)
         except Exception:
-            logger.exception(self.strings["Failed_to_load_library"])
+            logger.exception(self.strings["no_lib"])
             self.lib = None
 
     @loader.command(ru_doc="- Отрисовать ASCII-ART (аргумент -f, отправляет файлом)")
@@ -83,7 +92,7 @@ class ASCII(loader.Module):
             )
 
         except Exception as e:
-            logger.exception(self.strings["Conversion_error"])
+            logger.exception(self.strings["ascii_err"])
             return await utils.answer(msg, f"<pre>{e}</pre>")
         if not art or not art.strip():
             return await utils.answer(msg, self.strings["empty"])
