@@ -249,7 +249,7 @@ class r34(loader.Module):
 
             for post in porn:
                 porn_tags = " ".join(f"#{tag}" for tag in post.tags[:6])
-        
+
             try:
                 await self.inline.form(
                     text=f"{porn_tags}",

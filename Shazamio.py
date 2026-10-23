@@ -112,5 +112,5 @@ class Shazamio(loader.Module):
             text = self.strings["result"].format(
                 artist=artist, title=title
                 )
-            
+
         await utils.answer(message, text)

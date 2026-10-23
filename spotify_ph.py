@@ -63,7 +63,7 @@ class spotifyph(loader.Module):
             s = self.lookup("SpotifyMod")
             if not s or not s.sp:
                 return self.strings("not_installed")
-            
+
             p = s.sp.current_user_playing_track()
             if not (p and p.get('item')):
                 return self.strings("nothing_plays")
@@ -86,7 +86,7 @@ class spotifyph(loader.Module):
 
         prog_ms = playback.get("progress_ms", 0)
         dur_ms = playback["item"].get("duration_ms", 0)
-        
+
         if dur_ms == 0:
             return "00:00 / 00:00"
 
@@ -110,7 +110,7 @@ class spotifyph(loader.Module):
             else:
                 mid_pos = f"{pref}empty_mid"
             bar += self.strings(mid_pos)
-        
+
         if filled_units >= 6:
             end_key = f"{pref}end_duration_full"
         else:
