@@ -6,8 +6,7 @@
 # meta banner: https://r2.fakecrime.bio/uploads/ddf03169-09fe-4eb1-8eea-bad1a4cc4ada.jpg
 # meta fhsdesc: Spotify, downloader, music, музыка, спотифай,скачать музыку
 # это не должно было быть в релизе,но ладно я потом пофикшу все и вся в говнокоде.
-__version__ = (1, 1, 1)
-# no_ml
+__version__ = (1, 1, 2)
 
 import asyncio
 import httpx
@@ -33,6 +32,7 @@ class SpotiSaver(loader.Module):
     strings = {
         "name": "SpotiSaver",
         # "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> link to song is not specified</b>",
+        "dead_module_message": "This mod is no longer supported bc the api's are unstable, sorry about that... Mb I’ll find a good, stable way to dl music from spotify soon, but right now im not ready to keep supporting this mod. thx for understanding.",
         "downloading": "<b><tg-emoji emoji-id=5443127283898405358>📥</tg-emoji> Downloading:</b> <code>{}</code>",
         "error": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Error, see logs!</b>",
         "done": "<b><tg-emoji emoji-id=5206607081334906820>✔️</tg-emoji> Done!</b>",
@@ -46,6 +46,7 @@ class SpotiSaver(loader.Module):
     strings_ru = {
         "name": "SpotiSaver",
         "_cls_doc": "Скачивание музыки из Spotify",
+        "dead_module_message": "Поддержка модуля прекращена из за не стабильных API,приношу свои извенения... Возможно вскором времени я найду хороший и стабильный способ скачивать музыку со спотифай,но сейчас я не готов заниатся поддержкой данного модуля. Спасибо за понимание.",
         # "args": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> link to song is not specified</b>",
         "downloading": "<b><tg-emoji emoji-id=5443127283898405358>📥</tg-emoji> Скачиваю:</b> <code>{}</code>",
         "error": "<b><tg-emoji emoji-id=5210952531676504517>❌</tg-emoji> Ерорь, смотри логи!</b>",
@@ -75,7 +76,11 @@ class SpotiSaver(loader.Module):
         self.api_url = "https://spotyloader.com/api/spotify"
         self.storage_url = "https://usc1.contabostorage.com/de91f9e22993446b9f80b560103d3e27:tracks/tracks/spotify"
 
-    async def get_current_spotify_url(self) -> str | None:
+        async def client_ready(self, client, db):
+        if self.get("dev_is_alive") is None:
+            self.set("dev_is_alive", False)
+
+    async def get_current_spotify_url(self): #нахуй типизацию
         spotifymod = self.lookup("SpotifyMod")
         if not spotifymod or not spotifymod.sp:
             return None
@@ -130,6 +135,10 @@ class SpotiSaver(loader.Module):
     @loader.command(ru_doc="<ссылка> — Скачать трек из Spotify")
     async def spotsave(self, message: Message):
         """<link> - Download track from Spotify"""
+        #bye
+        if not self.get("dev_is_alive", False):
+            return await utils.answer(message, self.strings["dead_module_message"])
+        #bye
         args = utils.get_args_raw(message)
         if not args:
             spotifymod = self.lookup("SpotifyMod")
@@ -182,7 +191,7 @@ class SpotiSaver(loader.Module):
                         else []
                     ),
                 )
-            
+
                 await message.delete()
                 if os.path.exists(filename):
                     os.remove(filename)
