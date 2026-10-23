@@ -47,11 +47,11 @@ class ASCII(loader.Module):
 
     def __init__(self):
         self.config = loader.ModuleConfig(
-            loader.ConfigValue("width", 50,lambda: self.strings["cfg_width"]),
-            loader.ConfigValue("threshold", 0.65,lambda: self.strings["cfg_threshold"]),
-            loader.ConfigValue("contrast", 2.0,lambda: self.strings["porn_reulsts_doc"]),
-            loader.ConfigValue("chars", 464,lambda: self.strings["cfg_contrast"]),
-            loader.ConfigValue("invert", False),lambda: self.strings["cfg_invert"],
+            loader.ConfigValue("width", 50, lambda: self.strings["cfg_width"]),
+            loader.ConfigValue("threshold", 0.65, lambda: self.strings["cfg_threshold"]),
+            loader.ConfigValue("contrast", 2.0, lambda: self.strings["cfg_contrast"]),
+            loader.ConfigValue("chars", 464, lambda: self.strings["cfg_chars"]),
+            loader.ConfigValue("invert", False, lambda: self.strings["cfg_invert"]),
         )
         self.lib = None
 
