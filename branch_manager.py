@@ -65,7 +65,7 @@ on <code>{repo_name}</code> repository""",
         "close_button": "Закрыть",
         "back_button": "Назад",
         "understand_button": "Я понимаю",
-        "cfg_doc": "Конфигурация для работы с репозиториями"
+        "cfg_doc": "Конфигурация для работы с репозиториями",
         "cfg_default_repo": "Репозиторий по умолчанию",
         "cfg_default_link": "Ссылка на репозиторий по умолчанию",
         "cfg_default_branches": "Список веток репозитория по умолчанию",
