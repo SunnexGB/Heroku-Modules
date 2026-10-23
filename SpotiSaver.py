@@ -76,7 +76,7 @@ class SpotiSaver(loader.Module):
         self.api_url = "https://spotyloader.com/api/spotify"
         self.storage_url = "https://usc1.contabostorage.com/de91f9e22993446b9f80b560103d3e27:tracks/tracks/spotify"
 
-    async def client_ready(self, client, db)
+    async def client_ready(self, client, db):
         if self.get("dev_is_alive") is None:
             self.set("dev_is_alive", False)
 
