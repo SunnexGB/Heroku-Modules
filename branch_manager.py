@@ -36,7 +36,7 @@ on <code>{repo_name}</code> repository""",
         "close_button": "Close",
         "back_button": "Back",
         "understand_button": "I understond",
-        "cfg_doc": "Cfg's for work repo's"
+        "cfg_doc": "Cfg's for work repo's",
         "cfg_default_repo": "default repo",
         "cfg_default_link": "default repo link",
         "cfg_default_branches": "all repo branchers by default",
