@@ -10,7 +10,7 @@
 # meta banner: https://r2.fakecrime.bio/uploads/38dc99ec-1ed3-4e09-830f-785aec51435d.jpg
 # meta developer: Author: @hikarimods | Forked by: @SunnexGB
 # scope: heroku_only
-# scope: heroku_min 2.1.0
+# scope: heroku_min 2.2.0
 
 import requests
 from herokutl.types import Message
@@ -22,7 +22,6 @@ class AniSearchMod(loader.Module):
 
     strings = {
         "name": "AniSearch",
-        "no_lib": "<tg-emoji emoji-id=5348118479847333898>🗑</tg-emoji> | <b>Library not loaded</b>",
         "404": (
             "<tg-emoji emoji-id=5348118479847333898>🗑</tg-emoji> <b>I don't know which"
             " anime it is...</b>"
@@ -75,7 +74,6 @@ class AniSearchMod(loader.Module):
 
     strings_ru = {
         "_cls_doc": "Ищет конкретную серию и тайм-код аниме по скриншоту",
-        "no_lib": "<tg-emoji emoji-id=5348118479847333898>🗑</tg-emoji> | <b>>Библиотека не была загружена</b>",
         "404": (
             "<tg-emoji emoji-id=5348118479847333898>🗑</tg-emoji> <b>Я не знаю"
             " что это за аниме...</b>"
@@ -129,7 +127,6 @@ class AniSearchMod(loader.Module):
     strings_jp = {
     "_cls_doc": "スクリーンショットからアニメの特定のエピソードとタイムコードを検索します",
     "name": "AniSearch",
-    "no_lib": "<tg-emoji emoji-id=5348118479847333898>🗑</tg-emoji> | <b>ライブラリがロードされていません</b>",
     "404": (
         "<tg-emoji emoji-id=5348118479847333898>🗑</tg-emoji> <b>どのアニメか"
         "わかりません…</b>"
@@ -190,13 +187,6 @@ class AniSearchMod(loader.Module):
                 validator=loader.validators.Choice(["native", "romaji", "chinese", "english"]),
             ),
         )
-        self.lib = None
-
-    async def client_ready(self):
-        self.lib = await self.import_lib(
-            "https://raw.githubusercontent.com/SunnexGB/Heroku-Modules/refs/heads/main/External%20libs/rich_message_lib.py",
-            suspend_on_error=True,
-        )
 
     async def on_unload(self):
         if self.lib:
@@ -221,9 +211,6 @@ class AniSearchMod(loader.Module):
     async def anisearchcmd(self, message: Message):
         # зачем этот кадр вообще нужен,если в итоге ты отвечаешь скорее просто на фото.
         """- Search anime by photo"""
-        if not self.lib:
-            return await utils.answer(message, self.strings("no_lib"))
- 
         reply = await message.get_reply_message()
         if not message.media and (not reply or not reply.media):
             await utils.answer(message, self.strings("media_not_found"))
