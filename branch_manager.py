@@ -36,6 +36,11 @@ on <code>{repo_name}</code> repository""",
         "close_button": "Close",
         "back_button": "Back",
         "understand_button": "I understond",
+        "cfg_doc": "Cfg's for work repo's"
+        "cfg_default_repo": "default repo",
+        "cfg_default_link": "default repo link",
+        "cfg_default_branches": "all repo branchers by default",
+
     }
 
     strings_ru = {
@@ -60,6 +65,10 @@ on <code>{repo_name}</code> repository""",
         "close_button": "Закрыть",
         "back_button": "Назад",
         "understand_button": "Я понимаю",
+        "cfg_doc": "Конфигурация для работы с репозиториями"
+        "cfg_default_repo": "Репозиторий по умолчанию",
+        "cfg_default_link": "Ссылка на репозиторий по умолчанию",
+        "cfg_default_branches": "Список веток репозитория по умолчанию",
     }
 
     def __init__(self):
@@ -71,20 +80,20 @@ on <code>{repo_name}</code> repository""",
                 loader.ConfigValue(
                     "default_repo",
                     "ZetGoHack/Heroku",
-                    "Репозиторий по умолчанию",
+                    lambda: self.strings["cfg_default_repo"],
                 ),
                 loader.ConfigValue(
                     "default_link",
                     "https://github.com/ZetGoHack/Heroku.git",
-                    "Ссылка на репозиторий по умолчанию",
+                    lambda: self.strings["cfg_default_link"],
                     validator=loader.validators.Link(),
                 ),
                 loader.ConfigValue(
                     "default_branches",
                     ["master", "args", "beta", "dev", "kuri"],
-                    "Список веток репозитория по умолчанию",
+                    lambda: self.strings["cfg_default_branches"],
                 ),
-                doc="Конфигурация для работы с репозиториями",
+                doc=lambda: self.strings["cfg_doc"],
             ),
         )
 
