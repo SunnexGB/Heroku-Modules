@@ -39,7 +39,6 @@ class Mikuru(loader.Module):
                  -1001554874075,
                  -1001984640085],
                 "Ignored chats",
-                validator=loader.validators.Series()
             ),
         )
         self.bad_words = None
@@ -94,7 +93,7 @@ class Mikuru(loader.Module):
         """- Add to list ignored chats(will not work in these chats) <id/@>"""
         args = utils.get_args_raw(message)
         if not args:
-            target = str(utils.get_chat_id(message))
+            target = (utils.get_chat_id(message))
         else:
             target = args.strip()
         ignored = list(self.config["Ignored_chats"])
@@ -115,8 +114,8 @@ class Mikuru(loader.Module):
         if not message.out:
             return
 
-        chat_id = str(utils.get_chat_id(message))
-        user_id = str(getattr(message.sender_id, "id", message.sender_id))
+        chat_id = (utils.get_chat_id(message))
+        user_id = (getattr(message.sender_id, "id", message.sender_id))
 
         if chat_id in self.config["Ignored_chats"] or user_id in self.config["Ignored_chats"]:
             return
